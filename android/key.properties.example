@@ -1,0 +1,16 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Release signing configuration (template).
+#
+# DO NOT commit a populated `key.properties` file. Add it to .gitignore.
+# Generate a keystore once:
+#
+#   keytool -genkey -v -keystore upload-keystore.jks \
+#           -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+#
+# Then copy this file to `android/key.properties` and fill it in locally / on
+# CI via secret env vars.
+# ─────────────────────────────────────────────────────────────────────────────
+storePassword=CHANGEME
+keyPassword=CHANGEME
+keyAlias=upload
+storeFile=/absolute/path/to/upload-keystore.jks

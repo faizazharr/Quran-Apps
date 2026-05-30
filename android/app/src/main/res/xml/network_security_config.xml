@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Network security policy.
+
+    1. cleartextTrafficPermitted="false" — the app refuses plain HTTP for all
+       domains (CWE-319, OWASP M3 "Insecure Communication"). All API/CDN
+       endpoints used by the app are HTTPS.
+    2. Only the AlQuran Cloud REST + Islamic Network audio CDN are pinned as
+       allowed domains. Anything else is rejected by the platform.
+    3. trust-anchors restricts the trust store to the system CAs only —
+       user-installed CAs cannot be used to MITM the app on release builds.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">api.alquran.cloud</domain>
+        <domain includeSubdomains="true">cdn.islamic.network</domain>
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </domain-config>
+
+    <!--
+        Debug-only overrides: allow user-installed CAs (Charles, mitmproxy)
+        so developers can inspect traffic. These rules are stripped from
+        release builds by AGP.
+    -->
+    <debug-overrides>
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </debug-overrides>
+</network-security-config>

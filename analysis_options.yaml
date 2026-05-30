@@ -1,0 +1,124 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Analyzer & linter configuration for the Quran Player app.
+#
+# Goals:
+#   1. Catch real bugs early (strict type checks + error promotions).
+#   2. Enforce a consistent style across the codebase so reviews stay focused
+#      on logic, not formatting.
+#   3. Encourage Clean Architecture / SOLID habits (small classes, immutable
+#      data, explicit interfaces, no leaky imports).
+#
+# Suppressing a rule:
+#   • Single line: `// ignore: rule_name`
+#   • Whole file: `// ignore_for_file: rule_name`
+# Prefer fixing the issue over ignoring the rule.
+# ─────────────────────────────────────────────────────────────────────────────
+
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  language:
+    strict-casts: true
+    strict-inference: true
+    strict-raw-types: true
+
+  exclude:
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
+    - "**/*.mocks.dart"
+    - "**/generated/**"
+    - "build/**"
+    - ".dart_tool/**"
+
+  errors:
+    # Promote a handful of high-signal warnings to errors so CI fails on them.
+    missing_required_param: error
+    missing_return: error
+    invalid_assignment: error
+    dead_code: error
+    unused_import: error
+    unused_local_variable: warning
+    unused_element: warning
+    todo: ignore
+
+linter:
+  rules:
+    # ── Style & formatting ──────────────────────────────────────────────────
+    prefer_single_quotes: true
+    require_trailing_commas: true
+    curly_braces_in_flow_control_structures: true
+    directives_ordering: true
+    sort_pub_dependencies: true
+    sort_child_properties_last: true
+    sort_unnamed_constructors_first: true
+    lines_longer_than_80_chars: false   # rely on `dart format`
+    eol_at_end_of_file: true
+    unnecessary_brace_in_string_interps: true
+    unnecessary_string_interpolations: true
+    unnecessary_lambdas: true
+    unnecessary_parenthesis: true
+    unnecessary_this: true
+    use_string_buffers: true
+
+    # ── Imports & project structure ─────────────────────────────────────────
+    # Inside lib/, prefer relative imports so refactors don't break paths.
+    prefer_relative_imports: true
+    always_use_package_imports: false
+    avoid_relative_lib_imports: true     # tests must use package: imports
+    library_prefixes: true
+    no_self_assignments: true
+    no_wildcard_variable_uses: true
+
+    # ── Correctness / null-safety / async hygiene ───────────────────────────
+    avoid_dynamic_calls: true
+    avoid_slow_async_io: true
+    avoid_type_to_string: true
+    cancel_subscriptions: true
+    close_sinks: true
+    discarded_futures: true
+    unawaited_futures: true
+    no_adjacent_strings_in_list: true
+    no_duplicate_case_values: true
+    throw_in_finally: true
+    test_types_in_equals: true
+    valid_regexps: true
+
+    # ── Immutability & OOP discipline (supports SOLID / clean architecture) ─
+    prefer_const_constructors: true
+    prefer_const_constructors_in_immutables: true
+    prefer_const_declarations: true
+    prefer_const_literals_to_create_immutables: true
+    prefer_final_fields: true
+    prefer_final_in_for_each: true
+    prefer_final_locals: true
+    prefer_initializing_formals: true
+    avoid_setters_without_getters: true
+    avoid_equals_and_hash_code_on_mutable_classes: true
+    avoid_field_initializers_in_const_classes: true
+    avoid_unused_constructor_parameters: true
+    one_member_abstracts: false          # single-method interfaces are OK
+    use_enums: true
+    use_super_parameters: true
+    use_to_and_as_if_applicable: true
+
+    # ── API / public surface hygiene ────────────────────────────────────────
+    public_member_api_docs: false        # not a published package
+    omit_local_variable_types: true
+    always_declare_return_types: true
+    avoid_returning_this: true
+    avoid_void_async: true
+    type_annotate_public_apis: true
+    parameter_assignments: true
+    prefer_void_to_null: true
+
+    # ── Flutter-specific ────────────────────────────────────────────────────
+    avoid_print: true
+    avoid_web_libraries_in_flutter: true
+    no_logic_in_create_state: true
+    use_build_context_synchronously: true
+    use_decorated_box: true
+    use_colored_box: true
+    use_full_hex_values_for_flutter_colors: true
+    use_key_in_widget_constructors: true
+    sized_box_for_whitespace: true
+    sized_box_shrink_expand: true

@@ -2,16 +2,19 @@ import 'dart:io';
 
 // ignore_for_file: experimental_member_use, avoid_slow_async_io
 import 'package:just_audio/just_audio.dart';
+import 'package:just_audio_background/just_audio_background.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import '../models/track.dart';
 import 'audio_player_service.dart';
 
-/// `just_audio`-backed implementation.
+/// `just_audio`-backed implementation with background playback support via
+/// `just_audio_background`.
 ///
-/// Uses [LockCachingAudioSource] so any track that has been streamed once is
-/// cached on the device and replayable while offline.
+/// * Uses [LockCachingAudioSource] so any track that has been streamed once is
+///   cached on device and replayable while offline.
+/// * Exposes lock-screen / notification controls through [MediaItem] metadata.
 class JustAudioPlayerService implements IAudioPlayerService {
   final AudioPlayer _player;
   Directory? _cacheDir;
@@ -34,16 +37,30 @@ class JustAudioPlayerService implements IAudioPlayerService {
     final cacheFile = File(p.join(dir.path, '${track.id}.mp3'));
 
     await _player.stop();
+
+    // Wrap in MediaItem so just_audio_background can populate the OS
+    // notification / lock screen with surah name and reciter.
+    final mediaItem = MediaItem(
+      id: track.id,
+      title: track.surah.englishName,
+      artist: track.artist,
+      album: 'Quran Player',
+      extras: {'surahNumber': track.surah.number},
+    );
+
     try {
       await _player.setAudioSource(
-        LockCachingAudioSource(Uri.parse(track.audioUrl), cacheFile: cacheFile),
+        LockCachingAudioSource(
+          Uri.parse(track.audioUrl),
+          cacheFile: cacheFile,
+          tag: mediaItem,
+        ),
       );
     } catch (_) {
-      // The cache-aware source can fail on some Android configurations / when
-      // the CDN rejects the request. Fall back to a plain network source so
-      // playback still works (without offline caching for this track). If the
-      // fallback also fails, the underlying error propagates to the caller.
-      await _player.setAudioSource(AudioSource.uri(Uri.parse(track.audioUrl)));
+      // Fallback to plain network source (no offline cache for this attempt).
+      await _player.setAudioSource(
+        AudioSource.uri(Uri.parse(track.audioUrl), tag: mediaItem),
+      );
     }
   }
 

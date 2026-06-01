@@ -5,6 +5,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/duration_formatter.dart';
 import '../../../data/models/track.dart';
+import '../../ayah/bloc/ayah_bloc.dart';
+import '../../ayah/view/ayah_view.dart';
 import '../bloc/player_bloc.dart';
 
 /// Modern bottom player panel with animated entrance + gradient.
@@ -145,6 +147,18 @@ class _Header extends StatelessWidget {
                   ],
                 ],
               ),
+            ),
+            IconButton(
+              tooltip: 'Ayah text',
+              onPressed: () {
+                final ayahBloc = context.read<AyahBloc>();
+                final track = context.read<PlayerBloc>().state.track;
+                if (track != null) {
+                  ayahBloc.add(AyahLoadRequested(track.surah.number));
+                }
+                AyahView.show(context);
+              },
+              icon: const Icon(Icons.menu_book_outlined, color: Colors.white),
             ),
             IconButton(
               tooltip: 'Close',

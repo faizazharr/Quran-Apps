@@ -4,10 +4,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/responsive/responsive.dart';
+import '../../../data/models/edition.dart';
+import '../../../data/models/surah.dart';
 import '../../../data/models/track.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/widgets/empty_state_view.dart';
+import '../../bookmark/bloc/bookmark_bloc.dart';
 import '../../player/bloc/player_bloc.dart';
 import '../../player/view/player_panel.dart';
+import '../../settings/view/settings_screen.dart';
 import '../bloc/search_bloc.dart';
 import '../widgets/reciter_picker.dart';
 import '../widgets/search_header.dart';
@@ -154,30 +159,122 @@ class _ListPaneState extends State<_ListPane> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    final l10n = AppLocalizations.of(context);
+
+    // Auto-save last-played whenever the player position changes significantly.
+    return BlocListener<PlayerBloc, PlayerState>(
+      listenWhen: (prev, curr) =>
+          curr.hasTrack &&
+          curr.isPlaying &&
+          (curr.position - prev.position).inSeconds.abs() >= 5,
+      listener: (context, playerState) {
+        final track = playerState.track;
+        if (track == null) return;
+        context.read<BookmarkBloc>().add(
+          BookmarkLastPlayedSaved(
+            surahNumber: track.surah.number,
+            editionId: track.edition.identifier,
+            positionMs: playerState.position.inMilliseconds,
+          ),
+        );
+      },
+      child: Column(
+        children: [
+          SearchHeader(
+            controller: widget.controller,
+            onChanged: widget.onChanged,
+            onClear: widget.onClear,
+            compact: widget.compactHeader,
+            trailing: _HeaderActions(l10n: l10n),
+          ),
+          Expanded(
+            child: BlocBuilder<SearchBloc, SearchState>(
+              buildWhen: (a, b) =>
+                  a.status != b.status ||
+                  a.surahs != b.surahs ||
+                  a.visibleCount != b.visibleCount ||
+                  a.errorMessage != b.errorMessage,
+              builder: (context, state) {
+                return RefreshIndicator(
+                  onRefresh: widget.onRefresh,
+                  child: _ResultsList(
+                    state: state,
+                    scrollController: _scrollController,
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Continue chip + Settings icon shown inside the SearchHeader trailing area.
+class _HeaderActions extends StatelessWidget {
+  final AppLocalizations l10n;
+  const _HeaderActions({required this.l10n});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        SearchHeader(
-          controller: widget.controller,
-          onChanged: widget.onChanged,
-          onClear: widget.onClear,
-          compact: widget.compactHeader,
+        // "Continue listening" chip — only shown when last-played exists.
+        BlocBuilder<BookmarkBloc, BookmarkState>(
+          buildWhen: (prev, curr) => prev.lastPlayed != curr.lastPlayed,
+          builder: (context, bState) {
+            final lp = bState.lastPlayed;
+            if (lp == null) return const SizedBox.shrink();
+            return ActionChip(
+              avatar: const Icon(Icons.play_circle_outline, size: 18),
+              label: Text(
+                l10n.continueListening,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              onPressed: () {
+                final searchState = context.read<SearchBloc>().state;
+                final Surah? surah = searchState.surahs
+                    .cast<Surah?>()
+                    .firstWhere(
+                      (s) => s?.number == lp.surahNumber,
+                      orElse: () => null,
+                    );
+                final Edition? reciter = searchState.reciters
+                    .cast<Edition?>()
+                    .firstWhere(
+                      (e) => e?.identifier == lp.editionId,
+                      orElse: () => null,
+                    );
+                if (surah == null || reciter == null) return;
+                context.read<PlayerBloc>().add(
+                  PlayerTrackSelected(Track(surah: surah, edition: reciter)),
+                );
+                if (lp.positionMs > 0) {
+                  context.read<PlayerBloc>().add(
+                    PlayerSeekRequested(Duration(milliseconds: lp.positionMs)),
+                  );
+                }
+              },
+            );
+          },
         ),
-        Expanded(
-          child: BlocBuilder<SearchBloc, SearchState>(
-            buildWhen: (a, b) =>
-                a.status != b.status ||
-                a.surahs != b.surahs ||
-                a.visibleCount != b.visibleCount ||
-                a.errorMessage != b.errorMessage,
-            builder: (context, state) {
-              return RefreshIndicator(
-                onRefresh: widget.onRefresh,
-                child: _ResultsList(
-                  state: state,
-                  scrollController: _scrollController,
-                ),
-              );
-            },
+        const SizedBox(width: 4),
+        // Settings button.
+        IconButton(
+          icon: const Icon(Icons.settings_outlined, color: Colors.white),
+          tooltip: l10n.settings,
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => MultiBlocProvider(
+                providers: [
+                  BlocProvider.value(value: context.read<BookmarkBloc>()),
+                ],
+                child: const SettingsScreen(),
+              ),
+            ),
           ),
         ),
       ],

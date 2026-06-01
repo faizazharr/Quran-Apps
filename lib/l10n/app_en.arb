@@ -1,0 +1,35 @@
+{
+    "@@locale": "en",
+    "appTitle": "Quran Player",
+    "searchHint": "Search surah or reciter…",
+    "continueListening": "Continue listening",
+    "settings": "Settings",
+    "darkMode": "Dark mode",
+    "themeSystem": "Follow system",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "language": "Language",
+    "sleepTimer": "Sleep timer",
+    "sleepTimerOff": "Off",
+    "sleepTimerEndOfSurah": "End of surah",
+    "sleepTimerMinutes": "{minutes} minutes",
+    "@sleepTimerMinutes": {
+        "placeholders": {
+            "minutes": { "type": "int" }
+        }
+    },
+    "download": "Download",
+    "downloading": "Downloading",
+    "downloaded": "Downloaded",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "translation": "Translation",
+    "showTranslation": "Show translation",
+    "hideTranslation": "Hide translation",
+    "ayahNumber": "Ayah {number}",
+    "@ayahNumber": {
+        "placeholders": { "number": { "type": "int" } }
+    },
+    "cloudSync": "Cloud sync",
+    "cloudSyncNotConfigured": "Cloud sync is not configured."
+}

@@ -27,4 +27,23 @@ class ApiConstants {
   }) {
     return '$audioCdn/$bitrate/$editionIdentifier/$surahNumber.mp3';
   }
+
+  // ---------------------------------------------------------------------------
+  // Ayah text + translation endpoints
+  // ---------------------------------------------------------------------------
+
+  /// GET /surah/{surahNumber}/{editionId}
+  /// Returns full surah text for the given edition (Arabic or translation).
+  static Uri surahTextUrl({
+    required int surahNumber,
+    required String editionId,
+  }) => Uri.parse('$baseUrl/surah/$surahNumber/$editionId');
+
+  /// GET /surah/{surahNumber}/editions/{editions…}
+  /// Returns multiple editions in one call (comma-separated).
+  static Uri surahEditionsUrl({
+    required int surahNumber,
+    required List<String> editionIds,
+  }) =>
+      Uri.parse('$baseUrl/surah/$surahNumber/editions/${editionIds.join(',')}');
 }

@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../core/utils/ticker_service.dart';
+
 // ---------- Events ----------
 
 sealed class SleepTimerEvent extends Equatable {
@@ -11,15 +13,15 @@ sealed class SleepTimerEvent extends Equatable {
   List<Object?> get props => const [];
 }
 
-class SleepTimerStarted extends SleepTimerEvent {
+class SleepTimerStartRequested extends SleepTimerEvent {
   final SleepTimerOption option;
-  const SleepTimerStarted(this.option);
+  const SleepTimerStartRequested(this.option);
   @override
   List<Object?> get props => [option];
 }
 
-class SleepTimerCancelled extends SleepTimerEvent {
-  const SleepTimerCancelled();
+class SleepTimerCancelRequested extends SleepTimerEvent {
+  const SleepTimerCancelRequested();
 }
 
 /// Internal — fired by the periodic tick.
@@ -37,7 +39,7 @@ enum SleepTimerOption {
   min60(minutes: 60),
 
   /// Special: expire when the current surah finishes. The caller is
-  /// responsible for firing [SleepTimerCancelled] when playback completes.
+  /// responsible for firing [SleepTimerCancelRequested] when playback completes.
   endOfSurah(minutes: null);
 
   final int? minutes;
@@ -82,17 +84,20 @@ class SleepTimerState extends Equatable {
 // ---------- Bloc ----------
 
 class SleepTimerBloc extends Bloc<SleepTimerEvent, SleepTimerState> {
-  Timer? _ticker;
+  final ITickerService _tickerService;
+  StreamSubscription<int>? _tickSub;
 
-  SleepTimerBloc() : super(const SleepTimerState()) {
-    on<SleepTimerStarted>(_onStarted);
-    on<SleepTimerCancelled>(_onCancelled);
+  SleepTimerBloc({ITickerService? ticker})
+    : _tickerService = ticker ?? TickerService(),
+      super(const SleepTimerState()) {
+    on<SleepTimerStartRequested>(_onStarted);
+    on<SleepTimerCancelRequested>(_onCancelled);
     on<_SleepTimerTicked>(_onTicked);
   }
 
-  void _onStarted(SleepTimerStarted event, Emitter<SleepTimerState> emit) {
-    _ticker?.cancel();
-    _ticker = null;
+  void _onStarted(SleepTimerStartRequested event, Emitter<SleepTimerState> emit) {
+    unawaited(_tickSub?.cancel());
+    _tickSub = null;
 
     final option = event.option;
 
@@ -116,15 +121,15 @@ class SleepTimerBloc extends Bloc<SleepTimerEvent, SleepTimerState> {
       ),
     );
 
-    // Tick every second.
-    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
+    _tickSub = _tickerService.tick(const Duration(seconds: 1)).listen((_) {
       if (!isClosed) add(const _SleepTimerTicked());
     });
   }
 
-  void _onCancelled(SleepTimerCancelled event, Emitter<SleepTimerState> emit) {
-    _ticker?.cancel();
-    _ticker = null;
+  void _onCancelled(SleepTimerCancelRequested event, Emitter<SleepTimerState> emit) {
+    unawaited(_tickSub?.cancel());
+    _tickSub = null;
+    _tickerService.cancel();
     emit(const SleepTimerState());
   }
 
@@ -134,8 +139,9 @@ class SleepTimerBloc extends Bloc<SleepTimerEvent, SleepTimerState> {
 
     final next = remaining - const Duration(seconds: 1);
     if (next <= Duration.zero) {
-      _ticker?.cancel();
-      _ticker = null;
+      unawaited(_tickSub?.cancel());
+      _tickSub = null;
+      _tickerService.cancel();
       emit(
         state.copyWith(status: SleepTimerStatus.expired, clearRemaining: true),
       );
@@ -145,8 +151,9 @@ class SleepTimerBloc extends Bloc<SleepTimerEvent, SleepTimerState> {
   }
 
   @override
-  Future<void> close() {
-    _ticker?.cancel();
+  Future<void> close() async {
+    await _tickSub?.cancel();
+    _tickerService.cancel();
     return super.close();
   }
 }

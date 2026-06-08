@@ -9,7 +9,22 @@ import '../datasources/quran_remote_data_source.dart';
 import '../models/edition.dart';
 import '../models/surah.dart';
 import '../models/track.dart';
+import 'cache_first_mixin.dart';
 import 'quran_repository.dart';
+
+/// Pure value object returned by [QuranRepositoryImpl._composeTracks].
+/// Eliminates side effects from the composition function.
+class _ComposedData {
+  final List<Surah> surahs;
+  final List<Edition> reciters;
+  final List<Track> tracks;
+
+  const _ComposedData({
+    required this.surahs,
+    required this.reciters,
+    required this.tracks,
+  });
+}
 
 /// Default cache-first repository.
 ///
@@ -17,7 +32,7 @@ import 'quran_repository.dart';
 ///   1. If cache is populated → return immediately and refresh in background.
 ///   2. If cache is empty + online → fetch, cache, return.
 ///   3. If cache is empty + offline → [OfflineException].
-class QuranRepositoryImpl implements IQuranRepository {
+class QuranRepositoryImpl with CacheFirstMixin implements IQuranRepository {
   final IQuranRemoteDataSource _remote;
   final IQuranLocalDataSource _local;
   final IConnectivityService _connectivity;
@@ -128,7 +143,10 @@ class QuranRepositoryImpl implements IQuranRepository {
   Future<List<Track>> _buildFromLocal() async {
     final surahs = await _local.getSurahs();
     final editions = await _local.getEditions();
-    return _composeTracks(surahs, editions);
+    final composed = _composeTracks(surahs, editions);
+    _surahsMemoryCache = composed.surahs;
+    _recitersMemoryCache = composed.reciters;
+    return composed.tracks;
   }
 
   Future<void> _refreshFromRemote() async {
@@ -136,29 +154,29 @@ class QuranRepositoryImpl implements IQuranRepository {
     final editions = await _remote.fetchAudioEditions();
     await _local.cacheSurahs(surahs);
     await _local.cacheEditions(editions);
-    _tracksMemoryCache = _composeTracks(surahs, editions);
+    final composed = _composeTracks(surahs, editions);
+    _surahsMemoryCache = composed.surahs;
+    _recitersMemoryCache = composed.reciters;
+    _tracksMemoryCache = composed.tracks;
   }
 
-  Future<void> _refreshFromRemoteSilently() async {
-    try {
-      await _refreshFromRemote();
-    } catch (_) {
-      // Cached data is still valid; ignore.
-    }
-  }
+  Future<void> _refreshFromRemoteSilently() =>
+      refreshSilently(_refreshFromRemote);
 
-  List<Track> _composeTracks(List<Surah> surahs, List<Edition> editions) {
+  /// Pure composition — no side effects. Callers assign the returned caches.
+  _ComposedData _composeTracks(List<Surah> surahs, List<Edition> editions) {
     final filtered = editions
         .where((e) => _featuredReciters.contains(e.identifier))
         .toList();
     final reciters = filtered.isNotEmpty ? filtered : editions.take(4).toList();
 
-    _surahsMemoryCache = List.unmodifiable(surahs);
-    _recitersMemoryCache = List.unmodifiable(reciters);
-
-    return <Track>[
-      for (final s in surahs)
-        for (final e in reciters) Track(surah: s, edition: e),
-    ];
+    return _ComposedData(
+      surahs: List.unmodifiable(surahs),
+      reciters: List.unmodifiable(reciters),
+      tracks: [
+        for (final s in surahs)
+          for (final e in reciters) Track(surah: s, edition: e),
+      ],
+    );
   }
 }

@@ -9,10 +9,13 @@ import '../../../data/models/surah.dart';
 import '../../../data/models/track.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/widgets/empty_state_view.dart';
+import '../../ayah/view/ayah_view.dart';
 import '../../bookmark/bloc/bookmark_bloc.dart';
 import '../../player/bloc/player_bloc.dart';
 import '../../player/view/player_panel.dart';
+import '../../quote/view/quote_card.dart';
 import '../../settings/view/settings_screen.dart';
+import '../../sleep_timer/bloc/sleep_timer_bloc.dart';
 import '../bloc/search_bloc.dart';
 import '../widgets/reciter_picker.dart';
 import '../widgets/search_header.dart';
@@ -49,7 +52,7 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Future<void> _refresh() async {
-    context.read<SearchBloc>().add(const SearchRefreshed());
+    context.read<SearchBloc>().add(const SearchRefreshRequested());
     await Future<void>.delayed(const Duration(milliseconds: 250));
   }
 
@@ -171,7 +174,7 @@ class _ListPaneState extends State<_ListPane> {
         final track = playerState.track;
         if (track == null) return;
         context.read<BookmarkBloc>().add(
-          BookmarkLastPlayedSaved(
+          BookmarkLastPlayedSaveRequested(
             surahNumber: track.surah.number,
             editionId: track.edition.identifier,
             positionMs: playerState.position.inMilliseconds,
@@ -236,13 +239,13 @@ class _HeaderActions extends StatelessWidget {
               ),
               onPressed: () {
                 final searchState = context.read<SearchBloc>().state;
-                final Surah? surah = searchState.surahs
+                final surah = searchState.surahs
                     .cast<Surah?>()
                     .firstWhere(
                       (s) => s?.number == lp.surahNumber,
                       orElse: () => null,
                     );
-                final Edition? reciter = searchState.reciters
+                final reciter = searchState.reciters
                     .cast<Edition?>()
                     .firstWhere(
                       (e) => e?.identifier == lp.editionId,
@@ -250,7 +253,7 @@ class _HeaderActions extends StatelessWidget {
                     );
                 if (surah == null || reciter == null) return;
                 context.read<PlayerBloc>().add(
-                  PlayerTrackSelected(Track(surah: surah, edition: reciter)),
+                  PlayerTrackSelectRequested(Track(surah: surah, edition: reciter)),
                 );
                 if (lp.positionMs > 0) {
                   context.read<PlayerBloc>().add(
@@ -271,6 +274,7 @@ class _HeaderActions extends StatelessWidget {
               builder: (_) => MultiBlocProvider(
                 providers: [
                   BlocProvider.value(value: context.read<BookmarkBloc>()),
+                  BlocProvider.value(value: context.read<SleepTimerBloc>()),
                 ],
                 child: const SettingsScreen(),
               ),
@@ -278,6 +282,26 @@ class _HeaderActions extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Shows the reciter picker and plays the selected track.
+/// Called both on first-tap (no reciter) and on long-press (switch reciter).
+Future<void> _showReciterPickerFor(BuildContext context, Surah surah) async {
+  final searchBloc = context.read<SearchBloc>();
+  final reciters = searchBloc.state.reciters;
+  if (reciters.isEmpty) return;
+  final picked = await showReciterPicker(
+    context,
+    reciters: reciters,
+    selected: searchBloc.state.selectedReciter,
+    surahName: surah.englishName,
+  );
+  if (picked != null && context.mounted) {
+    searchBloc.add(SearchReciterChanged(picked));
+    context.read<PlayerBloc>().add(
+      PlayerTrackSelectRequested(Track(surah: surah, edition: picked)),
     );
   }
 }
@@ -312,7 +336,7 @@ class _ResultsList extends StatelessWidget {
                 subtitle: state.errorMessage,
                 actionLabel: 'Try again',
                 onAction: () =>
-                    context.read<SearchBloc>().add(const SearchRefreshed()),
+                    context.read<SearchBloc>().add(const SearchRefreshRequested()),
               ),
             ),
           ],
@@ -341,6 +365,8 @@ class _ResultsList extends StatelessWidget {
 
     final visible = state.visibleSurahs;
     final hasMore = state.hasMore;
+    final showQuote = state.query.trim().isEmpty;
+    final extraCount = showQuote ? 1 : 0;
 
     return BlocBuilder<PlayerBloc, PlayerState>(
       buildWhen: (prev, curr) =>
@@ -348,66 +374,68 @@ class _ResultsList extends StatelessWidget {
           prev.isPlaying != curr.isPlaying ||
           prev.isLoading != curr.isLoading,
       builder: (context, playerState) {
-        return Align(
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              maxWidth: Breakpoints.contentMaxWidth,
-            ),
-            child: ListView.builder(
-              controller: scrollController,
-              physics: const BouncingScrollPhysics(
-                parent: AlwaysScrollableScrollPhysics(),
-              ),
-              padding: const EdgeInsets.only(top: 8, bottom: 24),
-              // +1 slot for the static footer indicator.
-              itemCount: visible.length + 1,
-              cacheExtent: 800,
-              itemBuilder: (context, index) {
-                if (index == visible.length) {
-                  return _PaginationFooter(
-                    hasMore: hasMore,
-                    shown: visible.length,
-                    total: state.surahs.length,
-                  );
-                }
-                final surah = visible[index];
-                final isActive =
-                    playerState.track?.surah.number == surah.number;
-                final tileReciterName = isActive
-                    ? (playerState.track?.artist ?? '')
-                    : '';
-                return RepaintBoundary(
-                  child: SurahTile(
-                    surah: surah,
-                    isActive: isActive,
-                    isPlaying: isActive && playerState.isPlaying,
-                    isLoading: isActive && playerState.isLoading,
-                    reciterName: tileReciterName,
-                    onTap: () async {
-                      final searchBloc = context.read<SearchBloc>();
-                      final reciters = searchBloc.state.reciters;
-                      if (reciters.isEmpty) return;
-                      final picked = await showReciterPicker(
-                        context,
-                        reciters: reciters,
-                        selected: searchBloc.state.selectedReciter,
-                        surahName: surah.englishName,
-                      );
-                      if (picked != null && context.mounted) {
-                        searchBloc.add(SearchReciterChanged(picked));
-                        context.read<PlayerBloc>().add(
-                          PlayerTrackSelected(
-                            Track(surah: surah, edition: picked),
-                          ),
-                        );
-                      }
-                    },
-                  ),
-                );
-              },
-            ),
+        return ListView.builder(
+          controller: scrollController,
+          physics: const BouncingScrollPhysics(
+            parent: AlwaysScrollableScrollPhysics(),
           ),
+          padding: const EdgeInsets.only(top: 8, bottom: 24),
+          itemCount: visible.length + extraCount + 1,
+          // Disable defaults — we add RepaintBoundary manually and have no
+          // KeepAlive widgets, so these would be wasted overhead.
+          addRepaintBoundaries: false,
+          addAutomaticKeepAlives: false,
+          cacheExtent: 400,
+          itemBuilder: (context, index) {
+            if (showQuote && index == 0) {
+              return const RepaintBoundary(child: QuoteCard());
+            }
+
+            final adjustedIndex = showQuote ? index - 1 : index;
+
+            if (adjustedIndex == visible.length) {
+              return _PaginationFooter(
+                hasMore: hasMore,
+                shown: visible.length,
+                total: state.surahs.length,
+              );
+            }
+            final surah = visible[adjustedIndex];
+            final isActive = playerState.track?.surah.number == surah.number;
+            return RepaintBoundary(
+              child: SurahTile(
+                surah: surah,
+                isActive: isActive,
+                isPlaying: isActive && playerState.isPlaying,
+                isLoading: isActive && playerState.isLoading,
+                onReadTap: () {
+                  unawaited(
+                    AyahView.show(
+                      context,
+                      surahNumber: surah.number,
+                      surah: surah,
+                    ),
+                  );
+                },
+                onTap: () {
+                  final searchBloc = context.read<SearchBloc>();
+                  final selectedReciter = searchBloc.state.selectedReciter;
+                  // If a reciter is already selected, play immediately.
+                  if (selectedReciter != null) {
+                    context.read<PlayerBloc>().add(
+                      PlayerTrackSelectRequested(
+                        Track(surah: surah, edition: selectedReciter),
+                      ),
+                    );
+                    return;
+                  }
+                  // No reciter selected yet — fall through to picker.
+                  unawaited(_showReciterPickerFor(context, surah));
+                },
+                onLongPress: () => _showReciterPickerFor(context, surah),
+              ),
+            );
+          },
         );
       },
     );
@@ -468,24 +496,27 @@ class _PlayerPane extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocSelector<PlayerBloc, PlayerState, bool>(
-      selector: (s) => s.hasTrack,
-      builder: (context, hasTrack) {
-        if (!hasTrack) {
-          return const Padding(
-            padding: EdgeInsets.all(24),
-            child: EmptyStateView(
-              icon: Icons.headphones_rounded,
-              title: 'Pick a surah to play',
-              subtitle: 'Select any item from the list to start listening.',
+    return Column(
+      children: [
+        Expanded(
+          child: BlocSelector<PlayerBloc, PlayerState, bool>(
+            selector: (s) => s.hasTrack,
+            builder: (context, hasTrack) => AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              child: hasTrack
+                  ? const SizedBox.shrink(key: ValueKey('empty'))
+                  : const EmptyStateView(
+                      key: ValueKey('hint'),
+                      icon: Icons.headphones_rounded,
+                      title: 'Pick a surah to play',
+                      subtitle:
+                          'Select any item from the list to start listening.',
+                    ),
             ),
-          );
-        }
-        return const Column(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [PlayerPanel()],
-        );
-      },
+          ),
+        ),
+        const PlayerPanel(isBottomBar: false),
+      ],
     );
   }
 }

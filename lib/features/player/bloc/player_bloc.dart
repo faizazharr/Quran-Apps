@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../../data/models/track.dart';
 import '../../../data/services/audio_player_service.dart';
+import '../audio_error_mapper.dart';
 
 // ---------- Events ----------
 
@@ -15,9 +16,9 @@ sealed class PlayerEvent extends Equatable {
   List<Object?> get props => const [];
 }
 
-class PlayerTrackSelected extends PlayerEvent {
+class PlayerTrackSelectRequested extends PlayerEvent {
   final Track track;
-  const PlayerTrackSelected(this.track);
+  const PlayerTrackSelectRequested(this.track);
   @override
   List<Object?> get props => [track];
 }
@@ -145,13 +146,16 @@ class PlayerState extends Equatable {
 
 class PlayerBloc extends Bloc<PlayerEvent, PlayerState> {
   final IAudioPlayerService _player;
+  final AudioErrorMapper _errorMapper;
 
   StreamSubscription<Duration>? _positionSub;
   StreamSubscription<Duration?>? _durationSub;
   StreamSubscription<AudioPlaybackSnapshot>? _playbackSub;
 
-  PlayerBloc(this._player) : super(const PlayerState()) {
-    on<PlayerTrackSelected>(_onTrackSelected);
+  PlayerBloc(this._player, {AudioErrorMapper? errorMapper})
+    : _errorMapper = errorMapper ?? AudioErrorMapper(),
+      super(const PlayerState()) {
+    on<PlayerTrackSelectRequested>(_onTrackSelected);
     on<PlayerPlayRequested>(_onPlay);
     on<PlayerPauseRequested>(_onPause);
     on<PlayerSeekRequested>(_onSeek);
@@ -178,7 +182,7 @@ class PlayerBloc extends Bloc<PlayerEvent, PlayerState> {
   }
 
   Future<void> _onTrackSelected(
-    PlayerTrackSelected event,
+    PlayerTrackSelectRequested event,
     Emitter<PlayerState> emit,
   ) async {
     if (state.track?.id == event.track.id) {
@@ -199,25 +203,10 @@ class PlayerBloc extends Bloc<PlayerEvent, PlayerState> {
       // user instead of a generic "Playback failed" string.
       add(
         _PlayerErrorOccurred(
-          PlaybackException(_describeAudioError(e)).userMessage,
+          PlaybackException(_errorMapper.describe(e)).userMessage,
         ),
       );
     }
-  }
-
-  String _describeAudioError(Object e) {
-    final raw = e.toString();
-    if (raw.contains('403') || raw.toLowerCase().contains('forbidden')) {
-      return 'This reciter is not available for full-surah streaming.';
-    }
-    if (raw.contains('404')) {
-      return 'Audio file not found for this surah.';
-    }
-    if (raw.toLowerCase().contains('socket') ||
-        raw.toLowerCase().contains('network')) {
-      return 'Network error while loading audio. Check your connection.';
-    }
-    return 'Unable to load audio.';
   }
 
   Future<void> _onPlay(

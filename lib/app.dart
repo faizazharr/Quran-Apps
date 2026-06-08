@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -5,16 +8,11 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'core/di/service_locator.dart';
 import 'core/theme/app_theme.dart';
 import 'data/models/app_settings.dart';
-import 'data/repositories/ayah_repository.dart';
-import 'data/repositories/bookmark_repository.dart';
-import 'data/repositories/quran_repository.dart';
-import 'data/repositories/settings_repository.dart';
-import 'data/services/audio_player_service.dart';
-import 'data/services/download_service.dart';
 import 'features/ayah/bloc/ayah_bloc.dart';
 import 'features/bookmark/bloc/bookmark_bloc.dart';
 import 'features/download/bloc/download_bloc.dart';
 import 'features/player/bloc/player_bloc.dart';
+import 'features/quote/bloc/quote_bloc.dart';
 import 'features/search/bloc/search_bloc.dart';
 import 'features/search/view/search_screen.dart';
 import 'features/settings/bloc/settings_bloc.dart';
@@ -32,29 +30,31 @@ class QuranPlayerApp extends StatelessWidget {
       providers: [
         BlocProvider(
           create: (_) =>
-              SettingsBloc(sl<ISettingsRepository>())
-                ..add(const SettingsLoadRequested()),
+              sl<SettingsBloc>()..add(const SettingsLoadRequested()),
+        ),
+        BlocProvider(
+          create: (_) => sl<SearchBloc>()..add(const SearchLoadRequested()),
+        ),
+        BlocProvider(
+          create: (_) => sl<PlayerBloc>(),
         ),
         BlocProvider(
           create: (_) =>
-              SearchBloc(sl<IQuranRepository>())..add(const SearchStarted()),
+              sl<BookmarkBloc>()..add(const BookmarkLoadRequested()),
         ),
-        BlocProvider(create: (_) => PlayerBloc(sl<IAudioPlayerService>())),
         BlocProvider(
-          create: (_) =>
-              BookmarkBloc(sl<IBookmarkRepository>())
-                ..add(const BookmarkLoadRequested()),
+          create: (_) => sl<AyahBloc>(),
         ),
         BlocProvider(
           create: (_) =>
-              AyahBloc(sl<IAyahRepository>(), sl<ISettingsRepository>()),
+              sl<DownloadBloc>()..add(const DownloadLoadRequested()),
         ),
         BlocProvider(
-          create: (_) =>
-              DownloadBloc(sl<IDownloadService>())
-                ..add(const DownloadLoadRequested()),
+          create: (_) => sl<QuoteBloc>()..add(const QuoteLoadRequested()),
         ),
-        BlocProvider(create: (_) => SleepTimerBloc()),
+        BlocProvider(
+          create: (_) => sl<SleepTimerBloc>(),
+        ),
       ],
       child: BlocBuilder<SettingsBloc, SettingsState>(
         buildWhen: (prev, curr) =>
@@ -97,17 +97,137 @@ class QuranPlayerApp extends StatelessWidget {
                 child: child ?? const SizedBox.shrink(),
               );
             },
-            home: BlocListener<SleepTimerBloc, SleepTimerState>(
-              listenWhen: (prev, curr) =>
-                  prev.status != SleepTimerStatus.expired &&
-                  curr.status == SleepTimerStatus.expired,
-              listener: (context, _) =>
-                  context.read<PlayerBloc>().add(const PlayerPauseRequested()),
-              child: const SearchScreen(),
+            home: MultiBlocListener(
+              listeners: [
+                // Timed sleep: pause when countdown reaches zero.
+                BlocListener<SleepTimerBloc, SleepTimerState>(
+                  listenWhen: (prev, curr) =>
+                      prev.status != SleepTimerStatus.expired &&
+                      curr.status == SleepTimerStatus.expired,
+                  listener: (context, _) => context.read<PlayerBloc>().add(
+                    const PlayerPauseRequested(),
+                  ),
+                ),
+                // End-of-surah sleep: pause + cancel timer when track completes.
+                BlocListener<PlayerBloc, PlayerState>(
+                  listenWhen: (prev, curr) =>
+                      prev.status != PlaybackStatus.completed &&
+                      curr.status == PlaybackStatus.completed,
+                  listener: (context, _) {
+                    final timerState = context.read<SleepTimerBloc>().state;
+                    if (timerState.isActive && timerState.isEndOfSurah) {
+                      context.read<SleepTimerBloc>().add(
+                        const SleepTimerCancelRequested(),
+                      );
+                      context.read<PlayerBloc>().add(
+                        const PlayerPauseRequested(),
+                      );
+                    }
+                  },
+                ),
+              ],
+              child: const _ConnectivityBanner(child: SearchScreen()),
             ),
           );
         },
       ),
+    );
+  }
+}
+
+/// Listens to network connectivity changes and shows a persistent banner at
+/// the top of the scaffold when the device goes offline, and a brief "back
+/// online" snack when it reconnects.
+class _ConnectivityBanner extends StatefulWidget {
+  final Widget child;
+  const _ConnectivityBanner({required this.child});
+
+  @override
+  State<_ConnectivityBanner> createState() => _ConnectivityBannerState();
+}
+
+class _ConnectivityBannerState extends State<_ConnectivityBanner> {
+  StreamSubscription<List<ConnectivityResult>>? _sub;
+  bool _offline = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _sub = Connectivity().onConnectivityChanged.listen(_onChanged);
+  }
+
+  @override
+  void dispose() {
+    unawaited(_sub?.cancel());
+    super.dispose();
+  }
+
+  void _onChanged(List<ConnectivityResult> results) {
+    final isOffline = results.every((r) => r == ConnectivityResult.none);
+    if (isOffline == _offline) return;
+    setState(() => _offline = isOffline);
+
+    if (!isOffline && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.wifi_rounded, color: Colors.white, size: 18),
+              SizedBox(width: 8),
+              Text('Back online'),
+            ],
+          ),
+          duration: Duration(seconds: 3),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        AnimatedSize(
+          duration: const Duration(milliseconds: 200),
+          child: _offline
+              ? Material(
+                  color: Theme.of(context).colorScheme.errorContainer,
+                  child: SafeArea(
+                    bottom: false,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.wifi_off_rounded,
+                            size: 18,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onErrorContainer,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'No internet connection',
+                            style: TextStyle(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onErrorContainer,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                )
+              : const SizedBox.shrink(),
+        ),
+        Expanded(child: widget.child),
+      ],
     );
   }
 }

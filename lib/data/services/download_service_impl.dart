@@ -68,7 +68,7 @@ class DownloadServiceImpl implements IDownloadService {
       updatedAt: DateTime.now(),
     );
     await _persist(record);
-    _notifyListeners();
+    unawaited(_notifyListeners());
     _startDownload(
       surahNumber: surahNumber,
       editionId: editionId,
@@ -85,60 +85,75 @@ class DownloadServiceImpl implements IDownloadService {
     final cancelToken = _CancelToken();
     _active[key] = _ActiveDownload(cancelToken: cancelToken);
 
-    Future(() async {
-      try {
-        // Validate the URL is HTTPS before downloading.
-        final uri = Uri.parse(audioUrl);
-        if (uri.scheme != 'https') {
-          throw const RemoteException('Download URL must use HTTPS.');
-        }
+    // Intentional fire-and-forget: download runs independently of callers.
+    unawaited(
+      Future(() async {
+        try {
+          final uri = Uri.parse(audioUrl);
+          if (uri.scheme != 'https') {
+            throw const RemoteException('Download URL must use HTTPS.');
+          }
 
-        await _updateStatus(surahNumber, editionId, DownloadStatus.downloading);
-        _notifyListeners();
+          await _updateStatus(surahNumber, editionId, DownloadStatus.downloading);
+          unawaited(_notifyListeners());
 
-        final dir = await _ensureDir();
-        final file = File(p.join(dir.path, '$key.mp3'));
+          final dir = await _ensureDir();
+          final file = File(p.join(dir.path, '$key.mp3'));
 
-        final request = http.Request('GET', uri);
-        final response = await _http.send(request);
-        final total = response.contentLength ?? 0;
+          final request = http.Request('GET', uri);
+          final response = await _http.send(request);
+          final total = response.contentLength ?? 0;
 
-        var received = 0;
-        final sink = file.openWrite();
-        await for (final chunk in response.stream) {
+          var received = 0;
+          final sink = file.openWrite();
+
+          // Throttle DB writes + listener notifications: only fire when progress
+          // moves by ≥5% OR ≥500 ms have elapsed — avoids hundreds of DB
+          // round-trips per second on a fast connection.
+          var lastProgress = 0.0;
+          var lastNotifyTime = DateTime.now();
+
+          await for (final chunk in response.stream) {
+            if (cancelToken.isCancelled) {
+              await sink.close();
+              await file.delete();
+              return;
+            }
+            sink.add(chunk);
+            received += chunk.length;
+            final progress = total > 0 ? received / total : 0.0;
+            final elapsed = DateTime.now().difference(lastNotifyTime);
+            if (progress - lastProgress >= 0.05 ||
+                elapsed.inMilliseconds >= 500) {
+              await _updateProgress(
+                surahNumber,
+                editionId,
+                progress,
+                received,
+                total,
+              );
+              unawaited(_notifyListeners());
+              lastProgress = progress;
+              lastNotifyTime = DateTime.now();
+            }
+          }
+          await sink.close();
+
           if (cancelToken.isCancelled) {
-            await sink.close();
             await file.delete();
             return;
           }
-          sink.add(chunk);
-          received += chunk.length;
-          final progress = total > 0 ? received / total : 0.0;
-          await _updateProgress(
-            surahNumber,
-            editionId,
-            progress,
-            received,
-            total,
-          );
-          _notifyListeners();
-        }
-        await sink.close();
 
-        if (cancelToken.isCancelled) {
-          await file.delete();
-          return;
+          await _updateCompleted(surahNumber, editionId, file.path);
+          unawaited(_notifyListeners());
+        } catch (e) {
+          await _updateStatus(surahNumber, editionId, DownloadStatus.failed);
+          unawaited(_notifyListeners());
+        } finally {
+          _active.remove(key);
         }
-
-        await _updateCompleted(surahNumber, editionId, file.path);
-        _notifyListeners();
-      } catch (e) {
-        await _updateStatus(surahNumber, editionId, DownloadStatus.failed);
-        _notifyListeners();
-      } finally {
-        _active.remove(key);
-      }
-    });
+      }),
+    );
   }
 
   @override
@@ -155,7 +170,7 @@ class DownloadServiceImpl implements IDownloadService {
       where: 'surah_number = ? AND edition_id = ?',
       whereArgs: [surahNumber, editionId],
     );
-    _notifyListeners();
+    unawaited(_notifyListeners());
   }
 
   @override
@@ -170,7 +185,8 @@ class DownloadServiceImpl implements IDownloadService {
     final record = await get(surahNumber: surahNumber, editionId: editionId);
     if (record?.filePath != null) {
       final file = File(record!.filePath!);
-      if (await file.exists()) await file.delete();
+      // Synchronous exists check — avoids avoid_slow_async_io lint on hot path.
+      if (file.existsSync()) await file.delete();
     }
 
     final db = await _db.database;
@@ -179,13 +195,14 @@ class DownloadServiceImpl implements IDownloadService {
       where: 'surah_number = ? AND edition_id = ?',
       whereArgs: [surahNumber, editionId],
     );
-    _notifyListeners();
+    unawaited(_notifyListeners());
   }
 
   Future<Directory> _ensureDir() async {
     final base = await getApplicationSupportDirectory();
     final dir = Directory(p.join(base.path, 'audio_downloads'));
-    if (!await dir.exists()) await dir.create(recursive: true);
+    // Synchronous exists check is safe here since this is a one-time setup path.
+    if (!dir.existsSync()) await dir.create(recursive: true);
     return dir;
   }
 

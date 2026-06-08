@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../core/result/result.dart';
 import '../../../data/models/bookmark.dart';
 import '../../../data/repositories/bookmark_repository.dart';
 
@@ -38,12 +39,12 @@ class BookmarkDeleteRequested extends BookmarkEvent {
   List<Object?> get props => [id];
 }
 
-class BookmarkLastPlayedSaved extends BookmarkEvent {
+class BookmarkLastPlayedSaveRequested extends BookmarkEvent {
   final int surahNumber;
   final String editionId;
   final int positionMs;
 
-  const BookmarkLastPlayedSaved({
+  const BookmarkLastPlayedSaveRequested({
     required this.surahNumber,
     required this.editionId,
     required this.positionMs,
@@ -97,7 +98,7 @@ class BookmarkBloc extends Bloc<BookmarkEvent, BookmarkState> {
     on<BookmarkLoadRequested>(_onLoad);
     on<BookmarkAddRequested>(_onAdd);
     on<BookmarkDeleteRequested>(_onDelete);
-    on<BookmarkLastPlayedSaved>(_onSaveLastPlayed);
+    on<BookmarkLastPlayedSaveRequested>(_onSaveLastPlayed);
   }
 
   Future<void> _onLoad(
@@ -105,21 +106,35 @@ class BookmarkBloc extends Bloc<BookmarkEvent, BookmarkState> {
     Emitter<BookmarkState> emit,
   ) async {
     emit(state.copyWith(status: BookmarkStatus.loading, clearError: true));
+
     final bookmarksResult = await _repo.getBookmarks();
     final lastPlayedResult = await _repo.getLastPlayed();
 
-    final bookmarks = bookmarksResult.dataOrNull ?? const [];
-    final lastPlayed = lastPlayedResult.dataOrNull;
-    final error = bookmarksResult.errorOrNull ?? lastPlayedResult.errorOrNull;
-
-    emit(
-      state.copyWith(
-        status: error == null ? BookmarkStatus.ready : BookmarkStatus.error,
-        bookmarks: bookmarks,
-        lastPlayed: lastPlayed,
-        errorMessage: error?.userMessage,
-      ),
-    );
+    // Bookmarks failure is fatal — surface error to UI.
+    switch (bookmarksResult) {
+      case Failure(:final error):
+        emit(
+          state.copyWith(
+            status: BookmarkStatus.error,
+            errorMessage: error.userMessage,
+          ),
+        );
+        return;
+      case Success(:final data):
+        // Last-played failure is non-fatal: show bookmarks without resume chip.
+        final lastPlayed = switch (lastPlayedResult) {
+          Success(:final data) => data,
+          Failure() => null,
+        };
+        emit(
+          state.copyWith(
+            status: BookmarkStatus.ready,
+            bookmarks: data,
+            lastPlayed: lastPlayed,
+            clearError: true,
+          ),
+        );
+    }
   }
 
   Future<void> _onAdd(
@@ -131,36 +146,56 @@ class BookmarkBloc extends Bloc<BookmarkEvent, BookmarkState> {
       editionId: event.editionId,
       positionMs: event.positionMs,
     );
-    if (result.isSuccess) {
-      add(const BookmarkLoadRequested());
-    }
+    result.when(
+      success: (_) => add(const BookmarkLoadRequested()),
+      failure: (e) => emit(
+        state.copyWith(
+          status: BookmarkStatus.error,
+          errorMessage: e.userMessage,
+        ),
+      ),
+    );
   }
 
   Future<void> _onDelete(
     BookmarkDeleteRequested event,
     Emitter<BookmarkState> emit,
   ) async {
-    await _repo.deleteBookmark(event.id);
-    add(const BookmarkLoadRequested());
+    final result = await _repo.deleteBookmark(event.id);
+    result.when(
+      success: (_) => add(const BookmarkLoadRequested()),
+      failure: (e) => emit(
+        state.copyWith(
+          status: BookmarkStatus.error,
+          errorMessage: e.userMessage,
+        ),
+      ),
+    );
   }
 
   Future<void> _onSaveLastPlayed(
-    BookmarkLastPlayedSaved event,
+    BookmarkLastPlayedSaveRequested event,
     Emitter<BookmarkState> emit,
   ) async {
-    await _repo.saveLastPlayed(
+    final result = await _repo.saveLastPlayed(
       surahNumber: event.surahNumber,
       editionId: event.editionId,
       positionMs: event.positionMs,
     );
-    // Optimistically update state without a full reload.
-    final updated = Bookmark(
-      surahNumber: event.surahNumber,
-      editionId: event.editionId,
-      positionMs: event.positionMs,
-      isLastPlayed: true,
-      createdAt: DateTime.now(),
+    // Optimistically update state on success; silently swallow on failure
+    // (last-played is best-effort — a DB hiccup must not disrupt playback).
+    result.when(
+      success: (_) {
+        final updated = Bookmark(
+          surahNumber: event.surahNumber,
+          editionId: event.editionId,
+          positionMs: event.positionMs,
+          isLastPlayed: true,
+          createdAt: DateTime.now(),
+        );
+        emit(state.copyWith(lastPlayed: updated));
+      },
+      failure: (_) {},
     );
-    emit(state.copyWith(lastPlayed: updated));
   }
 }

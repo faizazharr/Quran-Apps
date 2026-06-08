@@ -1,0 +1,99 @@
+# .claudeignore — Claude AI / Claude Code index exclusions
+# Flutter/Dart Quran App
+#
+# Berbeda dari .copilotignore — Claude membaca lebih banyak context:
+#   ✅ docs/          — ARCHITECTURE.md, CHANGELOG.md berguna untuk pemahaman project
+#   ✅ pubspec.lock   — versi dependency exact berguna untuk debugging & suggestions
+#   ✅ lib/l10n/generated/ — Claude perlu tahu struktur lokalisasi saat edit .arb
+#   ✅ ios/Runner/Info.plist, AndroidManifest.xml — konfigurasi app penting
+#
+# Yang tetap di-ignore: build output, binary files, cache, IDE config, secrets.
+
+# ─── BUILD OUTPUT (2.1 GB) ────────────────────────────────────────────────────
+build/
+*.dill
+*.dill.d
+*.cache.dill.track.dill
+
+# ─── DART / FLUTTER TOOL CACHE (152 MB) ───────────────────────────────────────
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+.metadata
+
+# ─── GENERATED CODE ───────────────────────────────────────────────────────────
+# Pattern code gen (freezed, auto_route, dll) — jika project mulai pakai ini
+*.g.dart
+*.freezed.dart
+*.gr.dart
+
+# GeneratedPluginRegistrant — auto-generated Flutter tooling
+ios/Runner/GeneratedPluginRegistrant.h
+ios/Runner/GeneratedPluginRegistrant.m
+android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
+
+# Catatan: lib/l10n/generated/ TIDAK di-ignore agar Claude bisa baca
+# struktur localization saat membantu edit file .arb
+
+# ─── IDE & EDITOR CONFIG ──────────────────────────────────────────────────────
+.idea/
+android/.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# ─── ANDROID NATIVE BUILD CACHE ───────────────────────────────────────────────
+android/.gradle/
+android/.kotlin/
+android/app/debug/
+android/app/profile/
+android/app/release/
+android/gradle/wrapper/gradle-wrapper.jar
+
+# ─── iOS NATIVE BUILD CACHE ───────────────────────────────────────────────────
+ios/Pods/
+ios/Podfile.lock
+ios/Flutter/ephemeral/
+ios/Flutter/Generated.xcconfig
+ios/Flutter/flutter_export_environment.sh
+ios/Runner.xcworkspace/xcshareddata/
+ios/Runner.xcodeproj/xcshareddata/
+ios/Runner.xcodeproj/project.xcworkspace/
+
+# ─── BINARY ASSETS ────────────────────────────────────────────────────────────
+# Claude tidak bisa membaca file binary — hanya buang context window.
+assets/images/
+ios/Runner/Assets.xcassets/
+
+# Android launcher icons (binary PNG per-DPI)
+android/app/src/main/res/mipmap-hdpi/
+android/app/src/main/res/mipmap-mdpi/
+android/app/src/main/res/mipmap-xhdpi/
+android/app/src/main/res/mipmap-xxhdpi/
+android/app/src/main/res/mipmap-xxxhdpi/
+
+# ─── SECRETS & CREDENTIALS ────────────────────────────────────────────────────
+android/key.properties
+android/app/*.jks
+android/app/*.keystore
+google-services.json
+GoogleService-Info.plist
+*.env
+.env.*
+
+# ─── FILE BINARY NON-CODE DI ROOT ─────────────────────────────────────────────
+# PDF/HTML laporan — bukan source code, buang context window Claude.
+*.pdf
+*.html
+
+# ─── GIT INTERNALS ────────────────────────────────────────────────────────────
+.git/
+
+# ─── LOG & TEMP ───────────────────────────────────────────────────────────────
+*.log
+*.swp
+.DS_Store
+coverage/

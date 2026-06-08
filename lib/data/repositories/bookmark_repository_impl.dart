@@ -10,11 +10,11 @@ class BookmarkRepositoryImpl implements IBookmarkRepository {
 
   @override
   Future<Result<List<Bookmark>>> getBookmarks() =>
-      runCatching(() => _local.getBookmarks());
+      runCatching(_local.getBookmarks);
 
   @override
   Future<Result<Bookmark?>> getLastPlayed() =>
-      runCatching(() => _local.getLastPlayed());
+      runCatching(_local.getLastPlayed);
 
   @override
   Future<Result<void>> saveLastPlayed({

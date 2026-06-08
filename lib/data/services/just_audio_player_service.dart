@@ -31,6 +31,15 @@ class JustAudioPlayerService implements IAudioPlayerService {
     return dir;
   }
 
+  /// Returns true when [track] has already been fully downloaded to the local
+  /// audio cache. Used to choose the playback source explicitly instead of
+  /// relying on a silent catch.
+  Future<bool> isCached(Track track) async {
+    final dir = await _ensureCacheDir();
+    final cacheFile = File(p.join(dir.path, '${track.id}.mp3'));
+    return cacheFile.exists();
+  }
+
   @override
   Future<void> load(Track track) async {
     final dir = await _ensureCacheDir();
@@ -48,20 +57,23 @@ class JustAudioPlayerService implements IAudioPlayerService {
       extras: {'surahNumber': track.surah.number},
     );
 
-    try {
+    if (await cacheFile.exists()) {
+      // Track already on-disk — play from local file (works offline).
       await _player.setAudioSource(
-        LockCachingAudioSource(
-          Uri.parse(track.audioUrl),
-          cacheFile: cacheFile,
-          tag: mediaItem,
-        ),
+        AudioSource.file(cacheFile.path, tag: mediaItem),
       );
-    } catch (_) {
-      // Fallback to plain network source (no offline cache for this attempt).
-      await _player.setAudioSource(
-        AudioSource.uri(Uri.parse(track.audioUrl), tag: mediaItem),
-      );
+      return;
     }
+
+    // Stream from network; LockCachingAudioSource writes to cacheFile for
+    // subsequent offline playback.
+    await _player.setAudioSource(
+      LockCachingAudioSource(
+        Uri.parse(track.audioUrl),
+        cacheFile: cacheFile,
+        tag: mediaItem,
+      ),
+    );
   }
 
   @override

@@ -66,3 +66,4 @@ app.*.map.json
 **/GoogleService-Info.plist
 *.env
 .env.*
+/docs/

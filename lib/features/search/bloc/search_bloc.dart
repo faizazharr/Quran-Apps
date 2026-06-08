@@ -15,8 +15,8 @@ sealed class SearchEvent extends Equatable {
   List<Object?> get props => const [];
 }
 
-class SearchStarted extends SearchEvent {
-  const SearchStarted();
+class SearchLoadRequested extends SearchEvent {
+  const SearchLoadRequested();
 }
 
 class SearchQueryChanged extends SearchEvent {
@@ -26,8 +26,8 @@ class SearchQueryChanged extends SearchEvent {
   List<Object?> get props => [query];
 }
 
-class SearchRefreshed extends SearchEvent {
-  const SearchRefreshed();
+class SearchRefreshRequested extends SearchEvent {
+  const SearchRefreshRequested();
 }
 
 class SearchReciterChanged extends SearchEvent {
@@ -123,18 +123,22 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
   static const Duration _debounceDelay = Duration(milliseconds: 250);
 
   SearchBloc(this._repository) : super(const SearchState()) {
-    on<SearchStarted>(_onStarted);
-    on<SearchRefreshed>(_onRefreshed);
+    on<SearchLoadRequested>(_onStarted);
+    on<SearchRefreshRequested>(_onRefreshed);
     on<SearchQueryChanged>(_onQueryChanged);
     on<SearchReciterChanged>(_onReciterChanged);
     on<SearchLoadMoreRequested>(_onLoadMore);
   }
 
-  Future<void> _onStarted(SearchStarted event, Emitter<SearchState> emit) =>
-      _load(emit, status: SearchStatus.loading);
+  Future<void> _onStarted(
+    SearchLoadRequested event,
+    Emitter<SearchState> emit,
+  ) => _load(emit, status: SearchStatus.loading);
 
-  Future<void> _onRefreshed(SearchRefreshed event, Emitter<SearchState> emit) =>
-      _load(emit, status: SearchStatus.refreshing);
+  Future<void> _onRefreshed(
+    SearchRefreshRequested event,
+    Emitter<SearchState> emit,
+  ) => _load(emit, status: SearchStatus.refreshing);
 
   Future<void> _load(
     Emitter<SearchState> emit, {
@@ -187,28 +191,35 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
 
     _debounce?.cancel();
     final completer = Completer<void>();
+
     _debounce = Timer(_debounceDelay, () async {
-      final result = await _repository.searchSurahs(event.query);
-      if (!emit.isDone) {
-        result.when(
-          success: (surahs) => emit(
-            state.copyWith(
-              status: SearchStatus.success,
-              surahs: surahs,
-              visibleCount: SearchState.pageSize,
-              clearError: true,
+      try {
+        final result = await _repository.searchSurahs(event.query);
+        if (!emit.isDone) {
+          result.when(
+            success: (surahs) => emit(
+              state.copyWith(
+                status: SearchStatus.success,
+                surahs: surahs,
+                visibleCount: SearchState.pageSize,
+                clearError: true,
+              ),
             ),
-          ),
-          failure: (error) => emit(
-            state.copyWith(
-              status: SearchStatus.failure,
-              errorMessage: error.userMessage,
+            failure: (error) => emit(
+              state.copyWith(
+                status: SearchStatus.failure,
+                errorMessage: error.userMessage,
+              ),
             ),
-          ),
-        );
+          );
+        }
+      } finally {
+        // Always complete so the event handler never hangs — even if the
+        // repository throws an unexpected exception.
+        if (!completer.isCompleted) completer.complete();
       }
-      completer.complete();
     });
+
     await completer.future;
   }
 

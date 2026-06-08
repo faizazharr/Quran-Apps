@@ -1,8 +1,14 @@
+import 'dart:async';
+
 import 'package:equatable/equatable.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../core/result/result.dart';
 import '../../../data/models/ayah.dart';
+import '../../../data/models/surah.dart';
 import '../../../data/models/translation.dart';
+import '../../../data/models/translation_edition.dart';
 import '../../../data/repositories/ayah_repository.dart';
 import '../../../data/repositories/settings_repository.dart';
 
@@ -16,13 +22,21 @@ sealed class AyahEvent extends Equatable {
 
 class AyahLoadRequested extends AyahEvent {
   final int surahNumber;
-  const AyahLoadRequested(this.surahNumber);
+
+  /// Optional full Surah metadata — used to enrich the reader header.
+  final Surah? surah;
+
+  const AyahLoadRequested(this.surahNumber, {this.surah});
   @override
   List<Object?> get props => [surahNumber];
 }
 
 class AyahTranslationToggled extends AyahEvent {
   const AyahTranslationToggled();
+}
+
+class AyahLoadMoreRequested extends AyahEvent {
+  const AyahLoadMoreRequested();
 }
 
 /// Fired by PlayerBloc listener when the position changes so the active ayah
@@ -38,6 +52,8 @@ class AyahPositionUpdated extends AyahEvent {
 
 enum AyahStatus { initial, loading, ready, error }
 
+const int _kPageSize = 20;
+
 class AyahState extends Equatable {
   final AyahStatus status;
   final List<Ayah> ayahs;
@@ -45,6 +61,13 @@ class AyahState extends Equatable {
   final int activeIndex;
   final bool showTranslation;
   final String? errorMessage;
+  final int visibleCount;
+
+  /// Surah metadata for the reader header.
+  final String surahEnglishName;
+  final String surahArabicName;
+  final int surahNumber;
+  final int totalAyahs;
 
   const AyahState({
     this.status = AyahStatus.initial,
@@ -53,7 +76,17 @@ class AyahState extends Equatable {
     this.activeIndex = 0,
     this.showTranslation = false,
     this.errorMessage,
+    this.visibleCount = _kPageSize,
+    this.surahEnglishName = '',
+    this.surahArabicName = '',
+    this.surahNumber = 0,
+    this.totalAyahs = 0,
   });
+
+  List<Ayah> get visibleAyahs => ayahs.take(visibleCount).toList();
+  List<Translation> get visibleTranslations =>
+      translations.take(visibleCount).toList();
+  bool get hasMore => visibleCount < ayahs.length;
 
   AyahState copyWith({
     AyahStatus? status,
@@ -63,6 +96,11 @@ class AyahState extends Equatable {
     bool? showTranslation,
     String? errorMessage,
     bool clearError = false,
+    int? visibleCount,
+    String? surahEnglishName,
+    String? surahArabicName,
+    int? surahNumber,
+    int? totalAyahs,
   }) => AyahState(
     status: status ?? this.status,
     ayahs: ayahs ?? this.ayahs,
@@ -70,6 +108,11 @@ class AyahState extends Equatable {
     activeIndex: activeIndex ?? this.activeIndex,
     showTranslation: showTranslation ?? this.showTranslation,
     errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
+    visibleCount: visibleCount ?? this.visibleCount,
+    surahEnglishName: surahEnglishName ?? this.surahEnglishName,
+    surahArabicName: surahArabicName ?? this.surahArabicName,
+    surahNumber: surahNumber ?? this.surahNumber,
+    totalAyahs: totalAyahs ?? this.totalAyahs,
   );
 
   @override
@@ -80,6 +123,11 @@ class AyahState extends Equatable {
     activeIndex,
     showTranslation,
     errorMessage,
+    visibleCount,
+    surahEnglishName,
+    surahArabicName,
+    surahNumber,
+    totalAyahs,
   ];
 }
 
@@ -93,17 +141,22 @@ class AyahBloc extends Bloc<AyahEvent, AyahState> {
     on<AyahLoadRequested>(_onLoad);
     on<AyahTranslationToggled>(_onToggleTranslation);
     on<AyahPositionUpdated>(_onPositionUpdated);
+    on<AyahLoadMoreRequested>(_onLoadMore);
   }
 
   Future<void> _onLoad(AyahLoadRequested event, Emitter<AyahState> emit) async {
     emit(state.copyWith(status: AyahStatus.loading, clearError: true));
 
+    // Load settings once — reuse result for both edition and toggle preference.
     final settingsResult = await _settings.load();
     final settings = settingsResult.dataOrNull;
 
     final arabicEdition = settings?.arabicEditionId ?? 'quran-simple';
     final translationEdition =
-        settings?.translationEditionId ?? 'id.indonesian';
+        settings?.translationEditionId ??
+        TranslationEditions.forLocale(
+          WidgetsBinding.instance.platformDispatcher.locale.languageCode,
+        ).id;
     final showTranslation = settings?.showTranslation ?? false;
 
     final ayahsResult = await _repo.getAyahs(
@@ -111,35 +164,44 @@ class AyahBloc extends Bloc<AyahEvent, AyahState> {
       editionId: arabicEdition,
     );
 
-    if (ayahsResult.isFailure) {
-      emit(
-        state.copyWith(
-          status: AyahStatus.error,
-          errorMessage: ayahsResult.errorOrNull!.userMessage,
-        ),
-      );
-      return;
-    }
+    // Exhaustive pattern match — no nullable force-unwrap.
+    switch (ayahsResult) {
+      case Failure(:final error):
+        emit(
+          state.copyWith(
+            status: AyahStatus.error,
+            errorMessage: error.userMessage,
+          ),
+        );
+        return;
 
-    List<Translation> translations = const [];
-    if (showTranslation) {
-      final tResult = await _repo.getTranslations(
-        surahNumber: event.surahNumber,
-        editionId: translationEdition,
-      );
-      translations = tResult.dataOrNull ?? const [];
-    }
+      case Success(:final data):
+        var translations = const <Translation>[];
+        if (showTranslation) {
+          final tResult = await _repo.getTranslations(
+            surahNumber: event.surahNumber,
+            editionId: translationEdition,
+          );
+          translations = tResult.dataOrNull ?? const [];
+        }
 
-    emit(
-      state.copyWith(
-        status: AyahStatus.ready,
-        ayahs: ayahsResult.dataOrNull!,
-        translations: translations,
-        showTranslation: showTranslation,
-        activeIndex: 0,
-        clearError: true,
-      ),
-    );
+        final surah = event.surah;
+        emit(
+          state.copyWith(
+            status: AyahStatus.ready,
+            ayahs: data,
+            translations: translations,
+            showTranslation: showTranslation,
+            activeIndex: 0,
+            visibleCount: _kPageSize,
+            clearError: true,
+            surahEnglishName: surah?.englishName ?? '',
+            surahArabicName: surah?.name ?? '',
+            surahNumber: surah?.number ?? event.surahNumber,
+            totalAyahs: surah?.numberOfAyahs ?? data.length,
+          ),
+        );
+    }
   }
 
   Future<void> _onToggleTranslation(
@@ -149,7 +211,7 @@ class AyahBloc extends Bloc<AyahEvent, AyahState> {
     final next = !state.showTranslation;
     emit(state.copyWith(showTranslation: next));
 
-    // Save preference.
+    // Load settings once and reuse below.
     final settingsResult = await _settings.load();
     final s = settingsResult.dataOrNull;
     if (s != null) {
@@ -158,9 +220,11 @@ class AyahBloc extends Bloc<AyahEvent, AyahState> {
 
     // Lazy-load translations if we just turned them on and have ayahs loaded.
     if (next && state.translations.isEmpty && state.ayahs.isNotEmpty) {
-      final settingsResult2 = await _settings.load();
       final edition =
-          settingsResult2.dataOrNull?.translationEditionId ?? 'id.indonesian';
+          s?.translationEditionId ??
+          TranslationEditions.forLocale(
+            WidgetsBinding.instance.platformDispatcher.locale.languageCode,
+          ).id;
       final tResult = await _repo.getTranslations(
         surahNumber: state.ayahs.first.surahNumber,
         editionId: edition,
@@ -175,5 +239,17 @@ class AyahBloc extends Bloc<AyahEvent, AyahState> {
     // so we distribute position evenly across ayahs as an approximation.
     // TODO(future): replace with real ayah timing data when available.
     emit(state.copyWith(activeIndex: 0));
+  }
+
+  void _onLoadMore(AyahLoadMoreRequested event, Emitter<AyahState> emit) {
+    if (!state.hasMore) return;
+    emit(
+      state.copyWith(
+        visibleCount: (state.visibleCount + _kPageSize).clamp(
+          0,
+          state.ayahs.length,
+        ),
+      ),
+    );
   }
 }

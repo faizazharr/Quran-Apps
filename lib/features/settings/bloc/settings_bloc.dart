@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:equatable/equatable.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../data/models/app_settings.dart';
+import '../../../data/models/translation_edition.dart';
 import '../../../data/repositories/settings_repository.dart';
 
 // ---------- Events ----------
@@ -87,8 +91,34 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     emit(state.copyWith(status: SettingsStatus.loading, clearError: true));
     final result = await _repo.load();
     result.when(
-      success: (s) =>
-          emit(state.copyWith(status: SettingsStatus.ready, settings: s)),
+      success: (s) {
+        // If translation edition is still the out-of-box default ('id.indonesian'),
+        // check whether the user ever explicitly chose it (i.e. the db row was
+        // written). We detect "never chosen" by seeing if the stored value equals
+        // the compile-time default AND the device locale suggests a different
+        // language. This gives first-run locale detection without overriding a
+        // deliberate choice.
+        final isDefault =
+            s.translationEditionId == AppSettings.defaults.translationEditionId;
+        if (isDefault) {
+          final deviceLocale =
+              WidgetsBinding.instance.platformDispatcher.locale;
+          final bestEdition = TranslationEditions.forLocale(
+            deviceLocale.languageCode,
+          );
+          if (bestEdition.id != AppSettings.defaults.translationEditionId) {
+            final updated = s.copyWith(translationEditionId: bestEdition.id);
+            emit(
+              state.copyWith(status: SettingsStatus.ready, settings: updated),
+            );
+            // Best-effort: persist locale-detected default. Failure is
+            // non-fatal — the UI already reflects the correct value.
+            unawaited(_repo.save(updated));
+            return;
+          }
+        }
+        emit(state.copyWith(status: SettingsStatus.ready, settings: s));
+      },
       failure: (e) => emit(
         state.copyWith(
           status: SettingsStatus.error,

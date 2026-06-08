@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -5,13 +7,15 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/duration_formatter.dart';
 import '../../../data/models/track.dart';
-import '../../ayah/bloc/ayah_bloc.dart';
 import '../../ayah/view/ayah_view.dart';
+import '../../bookmark/bloc/bookmark_bloc.dart';
+import '../../search/bloc/search_bloc.dart';
 import '../bloc/player_bloc.dart';
 
 /// Modern bottom player panel with animated entrance + gradient.
 class PlayerPanel extends StatelessWidget {
-  const PlayerPanel({super.key});
+  final bool isBottomBar;
+  const PlayerPanel({super.key, this.isBottomBar = true});
 
   @override
   Widget build(BuildContext context) {
@@ -38,7 +42,10 @@ class PlayerPanel extends StatelessWidget {
             ),
             child: trackId == null
                 ? const SizedBox.shrink()
-                : const _PanelContent(key: ValueKey('panel')),
+                : _PanelContent(
+                    key: const ValueKey('panel'),
+                    isBottomBar: isBottomBar,
+                  ),
           ),
         );
       },
@@ -47,32 +54,38 @@ class PlayerPanel extends StatelessWidget {
 }
 
 class _PanelContent extends StatelessWidget {
-  const _PanelContent({super.key});
+  final bool isBottomBar;
+  const _PanelContent({super.key, required this.isBottomBar});
 
   @override
   Widget build(BuildContext context) {
-    return const DecoratedBox(
+    Widget child = const Padding(
+      padding: EdgeInsets.fromLTRB(18, 14, 18, 14),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _Header(),
+          SizedBox(height: 12),
+          RepaintBoundary(child: _SeekBar()),
+          SizedBox(height: 4),
+          _Controls(),
+        ],
+      ),
+    );
+
+    if (isBottomBar) {
+      child = SafeArea(top: false, child: child);
+    }
+
+    return DecoratedBox(
       decoration: BoxDecoration(
         gradient: AppColors.brandGradient,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: isBottomBar
+            ? const BorderRadius.vertical(top: Radius.circular(24))
+            : BorderRadius.circular(20),
       ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(18, 14, 18, 14),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _Header(),
-              SizedBox(height: 12),
-              _SeekBar(),
-              SizedBox(height: 4),
-              _Controls(),
-            ],
-          ),
-        ),
-      ),
+      child: child,
     );
   }
 }
@@ -92,79 +105,147 @@ class _Header extends StatelessWidget {
       builder: (context, vm) {
         final track = vm.track;
         if (track == null) return const SizedBox.shrink();
-        return Row(
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.18),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                '${track.surah.number}',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 18,
-                ),
-              ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    track.surah.englishName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 16,
-                    ),
+            Row(
+              children: [
+                Container(
+                  width: 52,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(16),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    track.artist,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: Colors.white70, fontSize: 12),
-                  ),
-                  if (vm.isError && vm.errorMessage != null) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      vm.errorMessage!,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Color(0xFFFFD2D2),
-                        fontSize: 11,
+                  alignment: Alignment.center,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Padding(
+                      padding: const EdgeInsets.all(4.0),
+                      child: Text(
+                        '${track.surah.number}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 18,
+                        ),
                       ),
                     ),
-                  ],
-                ],
-              ),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        track.surah.englishName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        track.artist,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Ayah text',
+                  onPressed: () {
+                    final track = context.read<PlayerBloc>().state.track;
+                    unawaited(
+                      AyahView.show(
+                        context,
+                        surahNumber: track?.surah.number,
+                        surah: track?.surah,
+                      ),
+                    );
+                  },
+                  icon: const Icon(
+                    Icons.menu_book_outlined,
+                    color: Colors.white,
+                  ),
+                ),
+                // Bookmark current position
+                BlocBuilder<PlayerBloc, PlayerState>(
+                  buildWhen: (p, c) => p.track?.id != c.track?.id,
+                  builder: (context, playerState) {
+                    final track = playerState.track;
+                    if (track == null) return const SizedBox.shrink();
+                    return IconButton(
+                      tooltip: 'Bookmark',
+                      onPressed: () {
+                        context.read<BookmarkBloc>().add(
+                          BookmarkAddRequested(
+                            surahNumber: track.surah.number,
+                            editionId: track.edition.identifier,
+                            positionMs: context
+                                .read<PlayerBloc>()
+                                .state
+                                .position
+                                .inMilliseconds,
+                          ),
+                        );
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Bookmarked'),
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      },
+                      icon: const Icon(
+                        Icons.bookmark_add_outlined,
+                        color: Colors.white,
+                      ),
+                    );
+                  },
+                ),
+                IconButton(
+                  tooltip: 'Close',
+                  onPressed: () => context.read<PlayerBloc>().add(
+                    const PlayerStopRequested(),
+                  ),
+                  icon: const Icon(Icons.close_rounded, color: Colors.white),
+                ),
+              ],
             ),
-            IconButton(
-              tooltip: 'Ayah text',
-              onPressed: () {
-                final ayahBloc = context.read<AyahBloc>();
-                final track = context.read<PlayerBloc>().state.track;
-                if (track != null) {
-                  ayahBloc.add(AyahLoadRequested(track.surah.number));
-                }
-                AyahView.show(context);
-              },
-              icon: const Icon(Icons.menu_book_outlined, color: Colors.white),
-            ),
-            IconButton(
-              tooltip: 'Close',
-              onPressed: () =>
-                  context.read<PlayerBloc>().add(const PlayerStopRequested()),
-              icon: const Icon(Icons.close_rounded, color: Colors.white),
+            AnimatedSize(
+              duration: const Duration(milliseconds: 200),
+              child: vm.isError && vm.errorMessage != null
+                  ? Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.only(top: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withValues(alpha: 0.25),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        vm.errorMessage!,
+                        style: const TextStyle(
+                          color: Color(0xFFFFD2D2),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    )
+                  : const SizedBox.shrink(),
             ),
           ],
         );
@@ -200,65 +281,97 @@ class _SeekBarState extends State<_SeekBar> {
 
   @override
   Widget build(BuildContext context) {
-    // Seek bar is the *only* thing that needs position ticks.
-    return BlocBuilder<PlayerBloc, PlayerState>(
-      buildWhen: (prev, curr) =>
-          prev.position != curr.position || prev.duration != curr.duration,
-      builder: (context, state) {
-        final totalMs = state.duration.inMilliseconds;
-        final max = totalMs > 0 ? totalMs.toDouble() : 1.0;
-        final liveMs = state.position.inMilliseconds.clamp(0, totalMs);
-        final value = (_dragValue ?? liveMs.toDouble()).clamp(0.0, max);
-
-        return Column(
-          children: [
-            SliderTheme(
-              data: SliderTheme.of(context).copyWith(
-                activeTrackColor: Colors.white,
-                inactiveTrackColor: Colors.white.withValues(alpha: 0.25),
-                thumbColor: Colors.white,
-                overlayColor: Colors.white.withValues(alpha: 0.2),
-                trackHeight: 3,
-              ),
-              child: Slider(
-                value: value,
-                max: max,
-                onChanged: totalMs > 0
-                    ? (v) => setState(() => _dragValue = v)
-                    : null,
-                onChangeEnd: totalMs > 0
-                    ? (v) {
-                        context.read<PlayerBloc>().add(
-                          PlayerSeekRequested(
-                            Duration(milliseconds: v.round()),
-                          ),
-                        );
-                        setState(() => _dragValue = null);
-                      }
-                    : null,
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    DurationFormatter.format(
-                      Duration(milliseconds: value.round()),
-                    ),
-                    style: const TextStyle(color: Colors.white70, fontSize: 12),
-                  ),
-                  Text(
-                    DurationFormatter.format(state.duration),
-                    style: const TextStyle(color: Colors.white70, fontSize: 12),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        );
+    return BlocListener<PlayerBloc, PlayerState>(
+      listenWhen: (prev, curr) => prev.track?.id != curr.track?.id,
+      listener: (context, state) {
+        setState(() {
+          _dragValue = null;
+        });
       },
+      child: BlocBuilder<PlayerBloc, PlayerState>(
+        buildWhen: (prev, curr) =>
+            prev.position != curr.position ||
+            prev.duration != curr.duration ||
+            prev.status != curr.status,
+        builder: (context, state) {
+          final totalMs = state.duration.inMilliseconds;
+          final max = totalMs > 0 ? totalMs.toDouble() : 1.0;
+          final liveMs = state.position.inMilliseconds.clamp(0, totalMs);
+          final value = (_dragValue ?? liveMs.toDouble()).clamp(0.0, max);
+
+          return Column(
+            children: [
+              SliderTheme(
+                data: SliderTheme.of(context).copyWith(
+                  activeTrackColor: Colors.white,
+                  inactiveTrackColor: Colors.white.withValues(alpha: 0.25),
+                  thumbColor: Colors.white,
+                  overlayColor: Colors.white.withValues(alpha: 0.2),
+                  trackHeight: 3,
+                ),
+                child: Slider(
+                  value: value,
+                  max: max,
+                  onChanged: totalMs > 0
+                      ? (v) => setState(() => _dragValue = v)
+                      : null,
+                  onChangeEnd: totalMs > 0
+                      ? (v) {
+                          context.read<PlayerBloc>().add(
+                            PlayerSeekRequested(
+                              Duration(milliseconds: v.round()),
+                            ),
+                          );
+                          setState(() => _dragValue = null);
+                        }
+                      : null,
+                ),
+              ),
+              if (state.status == PlaybackStatus.loading)
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 22,
+                    vertical: 4,
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(999),
+                    child: LinearProgressIndicator(
+                      minHeight: 2,
+                      color: Colors.white,
+                      backgroundColor: Colors.white.withValues(alpha: 0.25),
+                    ),
+                  ),
+                )
+              else
+                const SizedBox(height: 10),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      DurationFormatter.format(
+                        Duration(milliseconds: value.round()),
+                      ),
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 12,
+                      ),
+                    ),
+                    Text(
+                      DurationFormatter.format(state.duration),
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 }
@@ -281,13 +394,16 @@ class _Controls extends StatelessWidget {
       builder: (context, vm) {
         final bloc = context.read<PlayerBloc>();
         return Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
+            _GhostButton(
+              icon: Icons.skip_previous_rounded,
+              onTap: () => _jumpToAdjacent(context, -1),
+            ),
             _GhostButton(
               icon: Icons.replay_rounded,
               onTap: () => bloc.add(const PlayerSeekRequested(Duration.zero)),
             ),
-            const SizedBox(width: 16),
             _PrimaryButton(
               icon: vm.isPlaying
                   ? Icons.pause_rounded
@@ -299,7 +415,6 @@ class _Controls extends StatelessWidget {
                     : const PlayerPlayRequested(),
               ),
             ),
-            const SizedBox(width: 16),
             _GhostButton(
               icon: Icons.forward_10_rounded,
               onTap: () {
@@ -309,7 +424,10 @@ class _Controls extends StatelessWidget {
                 );
               },
             ),
-            const SizedBox(width: 16),
+            _GhostButton(
+              icon: Icons.skip_next_rounded,
+              onTap: () => _jumpToAdjacent(context, 1),
+            ),
             _SpeedChip(
               speed: vm.speed,
               speeds: _speeds,
@@ -333,6 +451,30 @@ class _ControlsVM extends Equatable {
   });
   @override
   List<Object?> get props => [isPlaying, isLoading, speed];
+}
+
+/// Navigates to the previous (delta = -1) or next (delta = +1) surah,
+/// keeping the same reciter.
+void _jumpToAdjacent(BuildContext context, int delta) {
+  final playerBloc = context.read<PlayerBloc>();
+  final currentTrack = playerBloc.state.track;
+  if (currentTrack == null) return;
+
+  final surahs = context.read<SearchBloc>().state.surahs;
+  if (surahs.isEmpty) return;
+
+  final currentIndex = surahs.indexWhere(
+    (s) => s.number == currentTrack.surah.number,
+  );
+  if (currentIndex == -1) return;
+
+  final nextIndex = currentIndex + delta;
+  if (nextIndex < 0 || nextIndex >= surahs.length) return;
+
+  final nextSurah = surahs[nextIndex];
+  playerBloc.add(
+    PlayerTrackSelectRequested(Track(surah: nextSurah, edition: currentTrack.edition)),
+  );
 }
 
 class _GhostButton extends StatelessWidget {
@@ -428,13 +570,20 @@ class _SpeedChip extends StatelessWidget {
       onLongPress: () async {
         final box = context.findRenderObject()! as RenderBox;
         final offset = box.localToGlobal(Offset.zero);
+        final screen = MediaQuery.sizeOf(context);
+        final menuHeight = speeds.length * 48.0;
+        final top = (offset.dy - menuHeight).clamp(
+          8.0,
+          screen.height - menuHeight - 8.0,
+        );
+
         final selected = await showMenu<double>(
           context: context,
           position: RelativeRect.fromLTRB(
             offset.dx,
-            offset.dy - speeds.length * 48.0,
+            top,
             offset.dx + box.size.width,
-            offset.dy,
+            top + menuHeight,
           ),
           items: speeds
               .map(

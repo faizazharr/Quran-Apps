@@ -1,0 +1,116 @@
+# .copilotignore — GitHub Copilot index exclusions
+# Flutter/Dart Quran App
+#
+# Yang DIBACA Copilot (source code asli):
+#   lib/            — Dart source: features, data, core, shared
+#   test/           — unit & bloc tests
+#   pubspec.yaml    — dependency declarations
+#   android/app/src/main/kotlin/   — Kotlin native code
+#   android/app/src/main/AndroidManifest.xml
+#   android/app/src/main/res/xml/, res/values/, res/drawable/
+#   ios/Runner/AppDelegate.swift, SceneDelegate.swift, Info.plist
+#   analysis_options.yaml, l10n.yaml
+
+# ─── BUILD OUTPUT (2.1 GB) ────────────────────────────────────────────────────
+# Hasil kompilasi Flutter+Android — berubah tiap build, bukan source code.
+build/
+
+# Dart kernel cache — binary besar, tidak bisa dibaca
+*.dill
+*.dill.d
+*.cache.dill.track.dill
+
+# ─── DART / FLUTTER TOOL CACHE (152 MB) ───────────────────────────────────────
+# Cache internal Flutter tooling — bukan kode yang ditulis developer.
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+.metadata
+
+# ─── GENERATED CODE ───────────────────────────────────────────────────────────
+# Auto-generated dari source — Copilot cukup baca .arb & source aslinya.
+lib/l10n/generated/
+*.g.dart
+*.freezed.dart
+*.gr.dart
+
+# GeneratedPluginRegistrant — di-generate Flutter tooling, bukan ditulis manual
+ios/Runner/GeneratedPluginRegistrant.h
+ios/Runner/GeneratedPluginRegistrant.m
+android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
+
+# ─── IDE & EDITOR CONFIG ──────────────────────────────────────────────────────
+# Konfigurasi lokal IDE — tidak relevan untuk code intelligence.
+.idea/
+android/.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# ─── ANDROID NATIVE BUILD CACHE ───────────────────────────────────────────────
+# Cache Gradle dan Kotlin incremental build — binary/metadata tooling.
+android/.gradle/
+android/.kotlin/
+android/app/debug/
+android/app/profile/
+android/app/release/
+# Gradle wrapper binary (JAR) — executable, bukan source
+android/gradle/wrapper/gradle-wrapper.jar
+
+# ─── iOS NATIVE BUILD CACHE ───────────────────────────────────────────────────
+# CocoaPods vendor dependencies — third-party native code.
+ios/Pods/
+ios/Podfile.lock
+# Ephemeral Flutter-generated iOS files
+ios/Flutter/ephemeral/
+ios/Flutter/Generated.xcconfig
+ios/Flutter/flutter_export_environment.sh
+# Xcode metadata — bukan source code
+ios/Runner.xcworkspace/xcshareddata/
+ios/Runner.xcodeproj/xcshareddata/
+ios/Runner.xcodeproj/project.xcworkspace/
+
+# ─── BINARY ASSETS (IMAGE FILES) ──────────────────────────────────────────────
+# File PNG/binary — Copilot tidak bisa membaca binary, hanya buang kuota index.
+assets/images/
+
+# iOS app icons (binary PNG, banyak resolusi)
+ios/Runner/Assets.xcassets/
+
+# Android launcher icons (binary PNG per-DPI folder)
+# DIKECUALIKAN: mipmap-anydpi-v26/ karena berisi XML (bukan binary)
+android/app/src/main/res/mipmap-hdpi/
+android/app/src/main/res/mipmap-mdpi/
+android/app/src/main/res/mipmap-xhdpi/
+android/app/src/main/res/mipmap-xxhdpi/
+android/app/src/main/res/mipmap-xxxhdpi/
+
+# Tambahkan jika ada: assets/fonts/, assets/audio/
+
+# ─── SECRETS & CREDENTIALS ────────────────────────────────────────────────────
+# Jangan pernah di-index — risiko kebocoran credential.
+android/key.properties
+android/app/*.jks
+android/app/*.keystore
+google-services.json
+GoogleService-Info.plist
+*.env
+.env.*
+
+# ─── LAPORAN & FILE BESAR NON-CODE ────────────────────────────────────────────
+# File HTML/PDF di root — hasil analisis/laporan, bukan source code.
+# Catatan: docs/ TIDAK di-ignore (ARCHITECTURE.md berguna untuk context Copilot)
+*.html
+*.pdf
+
+# ─── GIT INTERNALS ────────────────────────────────────────────────────────────
+.git/
+
+# ─── LOG & TEMP ───────────────────────────────────────────────────────────────
+*.log
+*.swp
+.DS_Store
+coverage/

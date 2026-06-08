@@ -68,14 +68,14 @@ class _DownloadsUpdated extends DownloadEvent {
 
 // ---------- State ----------
 
-enum DownloadStatus { initial, ready }
+enum DownloadBlocStatus { initial, ready }
 
 class DownloadState extends Equatable {
-  final DownloadStatus status;
+  final DownloadBlocStatus status;
   final List<DownloadRecord> records;
 
   const DownloadState({
-    this.status = DownloadStatus.initial,
+    this.status = DownloadBlocStatus.initial,
     this.records = const [],
   });
 
@@ -90,7 +90,7 @@ class DownloadState extends Equatable {
   }
 
   DownloadState copyWith({
-    DownloadStatus? status,
+    DownloadBlocStatus? status,
     List<DownloadRecord>? records,
   }) => DownloadState(
     status: status ?? this.status,
@@ -124,7 +124,7 @@ class DownloadBloc extends Bloc<DownloadEvent, DownloadState> {
     Emitter<DownloadState> emit,
   ) async {
     final all = await _service.getAll();
-    emit(state.copyWith(status: DownloadStatus.ready, records: all));
+    emit(state.copyWith(status: DownloadBlocStatus.ready, records: all));
   }
 
   Future<void> _onEnqueue(
@@ -159,12 +159,12 @@ class DownloadBloc extends Bloc<DownloadEvent, DownloadState> {
   }
 
   void _onUpdated(_DownloadsUpdated event, Emitter<DownloadState> emit) {
-    emit(state.copyWith(status: DownloadStatus.ready, records: event.records));
+    emit(state.copyWith(status: DownloadBlocStatus.ready, records: event.records));
   }
 
   @override
-  Future<void> close() {
-    _sub?.cancel();
+  Future<void> close() async {
+    await _sub?.cancel();
     return super.close();
   }
 }

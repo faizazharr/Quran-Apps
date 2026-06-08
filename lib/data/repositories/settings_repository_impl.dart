@@ -9,7 +9,7 @@ class SettingsRepositoryImpl implements ISettingsRepository {
   SettingsRepositoryImpl(this._local);
 
   @override
-  Future<Result<AppSettings>> load() => runCatching(() => _local.load());
+  Future<Result<AppSettings>> load() => runCatching(_local.load);
 
   @override
   Future<Result<void>> save(AppSettings settings) =>

@@ -26,9 +26,21 @@ import '../../data/services/database_service.dart';
 import '../../data/services/download_service.dart';
 import '../../data/services/download_service_impl.dart';
 import '../../data/services/just_audio_player_service.dart';
+import '../../data/services/quote_service.dart';
+import '../../features/ayah/bloc/ayah_bloc.dart';
+import '../../features/bookmark/bloc/bookmark_bloc.dart';
+import '../../features/download/bloc/download_bloc.dart';
+import '../../features/player/audio_error_mapper.dart';
+import '../../features/player/bloc/player_bloc.dart';
+import '../../features/quote/bloc/quote_bloc.dart';
+import '../../features/search/bloc/search_bloc.dart';
+import '../../features/settings/bloc/settings_bloc.dart';
+import '../../features/sleep_timer/bloc/sleep_timer_bloc.dart';
 import '../network/connectivity_service.dart';
 import '../network/connectivity_service_impl.dart';
 import '../network/network_client.dart';
+import '../utils/random_service.dart';
+import '../utils/ticker_service.dart';
 
 /// Global service locator instance.
 final GetIt sl = GetIt.instance;
@@ -92,6 +104,48 @@ Future<void> configureDependencies() async {
   );
   sl.registerLazySingleton<ISettingsRepository>(
     () => SettingsRepositoryImpl(sl<ISettingsDataSource>()),
+  );
+  sl.registerLazySingleton<IQuoteService>(
+    () => QuoteServiceImpl(
+      quranRepo: sl<IQuranRepository>(),
+      ayahRepo: sl<IAyahRepository>(),
+      settingsRepo: sl<ISettingsRepository>(),
+      random: sl<IRandomService>(),
+    ),
+  );
+
+  // --- Utilities ---
+  sl.registerLazySingleton<IRandomService>(RandomService.new);
+  sl.registerLazySingleton<ITickerService>(TickerService.new);
+  sl.registerLazySingleton<AudioErrorMapper>(AudioErrorMapper.new);
+
+  // --- BLoCs (factory — a new instance per BlocProvider.create call) ---
+  sl.registerFactory<SettingsBloc>(
+    () => SettingsBloc(sl<ISettingsRepository>()),
+  );
+  sl.registerFactory<SearchBloc>(
+    () => SearchBloc(sl<IQuranRepository>()),
+  );
+  sl.registerFactory<PlayerBloc>(
+    () => PlayerBloc(
+      sl<IAudioPlayerService>(),
+      errorMapper: sl<AudioErrorMapper>(),
+    ),
+  );
+  sl.registerFactory<BookmarkBloc>(
+    () => BookmarkBloc(sl<IBookmarkRepository>()),
+  );
+  sl.registerFactory<AyahBloc>(
+    () => AyahBloc(sl<IAyahRepository>(), sl<ISettingsRepository>()),
+  );
+  sl.registerFactory<DownloadBloc>(
+    () => DownloadBloc(sl<IDownloadService>()),
+  );
+  sl.registerFactory<QuoteBloc>(
+    () => QuoteBloc(sl<IQuoteService>()),
+  );
+  sl.registerFactory<SleepTimerBloc>(
+    () => SleepTimerBloc(ticker: sl<ITickerService>()),
   );
 }
 

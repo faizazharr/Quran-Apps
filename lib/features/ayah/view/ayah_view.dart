@@ -1,19 +1,34 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../data/models/ayah.dart';
-import '../../../data/models/translation.dart';
+import '../../../data/models/surah.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../player/bloc/player_bloc.dart';
 import '../bloc/ayah_bloc.dart';
 
-/// A bottom-sheet panel showing Arabic ayah text (and optional translation)
-/// for the currently-playing surah. Open it via [AyahView.show].
-class AyahView extends StatelessWidget {
+/// A bottom-sheet panel showing Arabic ayah text (and optional translation).
+/// Can be opened from the player panel (while playing) or directly from a
+/// surah tile (to read without playing). Use [AyahView.show].
+class AyahView extends StatefulWidget {
   const AyahView({super.key});
 
-  /// Convenience method: show as a modal bottom sheet.
-  static Future<void> show(BuildContext context) {
+  /// Show the Ayah reader as a modal bottom sheet.
+  /// If [surahNumber] is provided, triggers a fresh load; otherwise the
+  /// sheet shows whatever is already loaded in [AyahBloc] (e.g. from player).
+  /// Pass [surah] for a richer header (name, count).
+  static Future<void> show(
+    BuildContext context, {
+    int? surahNumber,
+    Surah? surah,
+  }) {
+    if (surahNumber != null) {
+      context.read<AyahBloc>().add(
+        AyahLoadRequested(surahNumber, surah: surah),
+      );
+    }
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -29,6 +44,41 @@ class AyahView extends StatelessWidget {
   }
 
   @override
+  State<AyahView> createState() => _AyahViewState();
+}
+
+class _AyahViewState extends State<AyahView> {
+  final ScrollController _scrollController = ScrollController();
+  Timer? _scrollDebounce;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollDebounce?.cancel();
+    _scrollController
+      ..removeListener(_onScroll)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    final pos = _scrollController.position;
+    if (pos.extentAfter < 300) {
+      _scrollDebounce?.cancel();
+      _scrollDebounce = Timer(const Duration(milliseconds: 200), () {
+        if (mounted) {
+          context.read<AyahBloc>().add(const AyahLoadMoreRequested());
+        }
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final scheme = Theme.of(context).colorScheme;
@@ -38,7 +88,9 @@ class AyahView extends StatelessWidget {
       initialChildSize: 0.6,
       maxChildSize: 0.92,
       minChildSize: 0.35,
-      builder: (context, scrollController) {
+      builder: (context, sheetScrollController) {
+        // Use the sheet's scroll controller for the sheet handle dragging,
+        // but our own controller for load-more detection on the list.
         return Column(
           children: [
             // Drag handle
@@ -59,10 +111,64 @@ class AyahView extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(20, 0, 8, 4),
               child: Row(
                 children: [
+                  const Icon(Icons.menu_book_rounded, size: 18),
+                  const SizedBox(width: 8),
                   Expanded(
-                    child: Text(
-                      l10n.ayahNumber(0).replaceAll('0', ''),
-                      style: Theme.of(context).textTheme.titleMedium,
+                    child: BlocSelector<AyahBloc, AyahState, _HeaderVM>(
+                      selector: (s) => _HeaderVM(
+                        englishName: s.surahEnglishName,
+                        arabicName: s.surahArabicName,
+                        number: s.surahNumber,
+                        totalAyahs: s.totalAyahs,
+                      ),
+                      builder: (context, vm) {
+                        final title = vm.englishName.isNotEmpty
+                            ? vm.englishName
+                            : (vm.number > 0 ? 'Surah ${vm.number}' : 'Quran');
+                        final subtitle = vm.totalAyahs > 0
+                            ? 'Surah ${vm.number} • ${vm.totalAyahs} Ayah'
+                            : '';
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    title,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.titleMedium,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                if (vm.arabicName.isNotEmpty)
+                                  Text(
+                                    vm.arabicName,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium
+                                        ?.copyWith(
+                                          fontFamily: 'Amiri',
+                                          fontSize: 18,
+                                        ),
+                                  ),
+                              ],
+                            ),
+                            if (subtitle.isNotEmpty)
+                              Text(
+                                subtitle,
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurfaceVariant,
+                                    ),
+                              ),
+                          ],
+                        );
+                      },
                     ),
                   ),
                   // Translation toggle button
@@ -119,22 +225,31 @@ class AyahView extends StatelessWidget {
                     return const Center(child: Text('No ayahs available.'));
                   }
 
+                  final visible = state.visibleAyahs;
+                  final hasMore = state.hasMore;
+
                   return ListView.separated(
-                    controller: scrollController,
+                    controller: _scrollController,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 20,
                       vertical: 12,
                     ),
-                    itemCount: state.ayahs.length,
-                    separatorBuilder: (_, __) =>
+                    itemCount: visible.length + (hasMore ? 1 : 0),
+                    separatorBuilder: (_, _) =>
                         const Divider(height: 24, indent: 8, endIndent: 8),
                     itemBuilder: (context, index) {
-                      final Ayah ayah = state.ayahs[index];
+                      if (index == visible.length) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16),
+                          child: Center(child: CircularProgressIndicator()),
+                        );
+                      }
+                      final ayah = visible[index];
                       final isActive = index == state.activeIndex;
-                      final Translation? translation =
+                      final translation =
                           state.showTranslation &&
-                              index < state.translations.length
-                          ? state.translations[index]
+                              index < state.visibleTranslations.length
+                          ? state.visibleTranslations[index]
                           : null;
 
                       return _AyahTile(
@@ -207,7 +322,7 @@ class _AyahTile extends StatelessWidget {
           Directionality(
             textDirection: TextDirection.rtl,
             child: Text(
-              ayah.text as String,
+              ayah.text,
               style: TextStyle(
                 fontFamily: 'Scheherazade New',
                 fontSize: 26,
@@ -235,4 +350,17 @@ class _AyahTile extends StatelessWidget {
       ),
     );
   }
+}
+
+class _HeaderVM {
+  final String englishName;
+  final String arabicName;
+  final int number;
+  final int totalAyahs;
+  const _HeaderVM({
+    required this.englishName,
+    required this.arabicName,
+    required this.number,
+    required this.totalAyahs,
+  });
 }

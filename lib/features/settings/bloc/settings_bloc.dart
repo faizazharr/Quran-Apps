@@ -103,8 +103,11 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
         if (isDefault) {
           final deviceLocale =
               WidgetsBinding.instance.platformDispatcher.locale;
-          final bestEdition = TranslationEditions.forLocale(
+          // Use both language AND country code for more precise first-run
+          // detection (e.g. 'ms_MY' → Malay, 'sr_BA' → Bosnian).
+          final bestEdition = TranslationEditions.forFullLocale(
             deviceLocale.languageCode,
+            deviceLocale.countryCode,
           );
           if (bestEdition.id != AppSettings.defaults.translationEditionId) {
             final updated = s.copyWith(translationEditionId: bestEdition.id);
@@ -141,9 +144,25 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     SettingsLocaleChanged event,
     Emitter<SettingsState> emit,
   ) async {
+    // Resolve language code: use the explicit tag, or fall back to the device
+    // locale so "Follow device" also updates the translation automatically.
+    final deviceLocale = WidgetsBinding.instance.platformDispatcher.locale;
+    final langCode = event.localeTag ?? deviceLocale.languageCode;
+    // For explicit language picks (e.g. "Indonesian") there is no country
+    // code — pass null so forFullLocale falls through to a plain lang match.
+    // For "Follow device" we have the full locale, so pass countryCode too.
+    final countryCode = event.localeTag == null
+        ? deviceLocale.countryCode
+        : null;
+    final bestEdition = TranslationEditions.forFullLocale(
+      langCode,
+      countryCode,
+    );
+
     final updated = state.settings.copyWith(
       localeTag: event.localeTag,
       clearLocale: event.localeTag == null,
+      translationEditionId: bestEdition.id,
     );
     emit(state.copyWith(settings: updated));
     await _repo.save(updated);

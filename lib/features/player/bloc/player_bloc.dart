@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../core/errors/app_exception.dart';
 import '../../../data/models/track.dart';
 import '../../../data/services/audio_player_service.dart';
 import '../audio_error_mapper.dart';
@@ -151,6 +150,7 @@ class PlayerBloc extends Bloc<PlayerEvent, PlayerState> {
   StreamSubscription<Duration>? _positionSub;
   StreamSubscription<Duration?>? _durationSub;
   StreamSubscription<AudioPlaybackSnapshot>? _playbackSub;
+  StreamSubscription<Object>? _errorSub;
 
   PlayerBloc(this._player, {AudioErrorMapper? errorMapper})
     : _errorMapper = errorMapper ?? AudioErrorMapper(),
@@ -179,6 +179,9 @@ class PlayerBloc extends Bloc<PlayerEvent, PlayerState> {
     _playbackSub = _player.playbackStream.listen(
       (s) => add(_PlayerPlaybackUpdated(s)),
     );
+    _errorSub = _player.errorStream.listen(
+      (e) => add(_PlayerErrorOccurred(_errorMapper.describe(e))),
+    );
   }
 
   Future<void> _onTrackSelected(
@@ -199,13 +202,7 @@ class PlayerBloc extends Bloc<PlayerEvent, PlayerState> {
       await _player.load(event.track);
       await _player.play();
     } catch (e) {
-      // Surface the real reason so a 403 / network failure is visible to the
-      // user instead of a generic "Playback failed" string.
-      add(
-        _PlayerErrorOccurred(
-          PlaybackException(_errorMapper.describe(e)).userMessage,
-        ),
-      );
+      add(_PlayerErrorOccurred(_errorMapper.describe(e)));
     }
   }
 
@@ -304,6 +301,7 @@ class PlayerBloc extends Bloc<PlayerEvent, PlayerState> {
     await _positionSub?.cancel();
     await _durationSub?.cancel();
     await _playbackSub?.cancel();
+    await _errorSub?.cancel();
     await _player.dispose();
     return super.close();
   }

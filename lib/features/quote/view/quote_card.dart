@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/theme/app_theme.dart';
-import '../../ayah/view/ayah_view.dart';
+import '../../../data/models/surah.dart';
+import '../../search/bloc/search_bloc.dart';
+import '../../surah/view/surah_detail_page.dart';
 import '../bloc/quote_bloc.dart';
 
 class QuoteCard extends StatelessWidget {
@@ -68,7 +70,20 @@ class QuoteCard extends StatelessWidget {
             child: InkWell(
               borderRadius: BorderRadius.circular(24),
               onTap: () {
-                unawaited(AyahView.show(context, surahNumber: quote.surahNumber));
+                // Navigate to the full surah detail page so the user can
+                // read the surrounding context and listen to the surah.
+                final surah = context
+                    .read<SearchBloc>()
+                    .state
+                    .surahs
+                    .cast<Surah?>()
+                    .firstWhere(
+                      (s) => s?.number == quote.surahNumber,
+                      orElse: () => null,
+                    );
+                if (surah != null) {
+                  unawaited(SurahDetailPage.show(context, surah));
+                }
               },
               child: Padding(
                 padding: const EdgeInsets.all(22),

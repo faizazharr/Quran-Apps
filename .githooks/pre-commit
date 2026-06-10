@@ -1,0 +1,32 @@
+#!/bin/sh
+# .githooks/pre-commit
+#
+# Runs before every `git commit`. Kept intentionally fast so it doesn't
+# interrupt the development flow.
+#
+# Checks performed:
+#   1. dart format — catches unformatted files before they enter the tree.
+#
+# To bypass in an emergency (not recommended):
+#   git commit --no-verify
+
+set -e
+
+BOLD='\033[1m'
+YELLOW='\033[1;33m'
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+NC='\033[0m'
+
+echo "${YELLOW}${BOLD}[pre-commit]${NC} Checking Dart formatting…"
+
+# Only check lib/ and test/ — ignores generated code and build artefacts.
+dart format --set-exit-if-changed lib test 2>&1 || {
+  echo ""
+  echo "${RED}${BOLD}[pre-commit] ✗ Formatting issues found.${NC}"
+  echo "  Fix with:  ${BOLD}dart format lib test${NC}"
+  echo "  Then re-stage the changed files and commit again."
+  exit 1
+}
+
+echo "${GREEN}${BOLD}[pre-commit] ✓ Formatting OK${NC}"

@@ -26,14 +26,16 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
-	<!-- App Transport Security: deny all cleartext HTTP. The app only talks
-	     to api.alquran.cloud and cdn.islamic.network, both HTTPS. -->
+	<!-- App Transport Security: deny all cleartext HTTP to external hosts.
+	     NSAllowsLocalNetworking must be true — just_audio_background uses a
+	     local audio session bridge over the loopback interface; blocking it
+	     prevents playback on iOS. -->
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>
 		<false/>
 		<key>NSAllowsLocalNetworking</key>
-		<false/>
+		<true/>
 	</dict>
 	<!-- Background audio playback (just_audio_background) -->
 	<key>UIBackgroundModes</key>

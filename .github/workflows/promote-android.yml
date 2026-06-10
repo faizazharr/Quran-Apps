@@ -1,0 +1,89 @@
+name: Promote — Android Play Store
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Manual workflow to promote a release between Play Store tracks without
+# rebuilding — the AAB already uploaded by cd-android.yml is reused.
+#
+# Typical promotion ladder:
+#   internal → alpha  (closed-group testers)
+#   alpha    → beta   (open testing)
+#   beta     → production
+#
+# Required repository secrets: same GOOGLE_PLAY_JSON used by cd-android.yml
+# ─────────────────────────────────────────────────────────────────────────────
+on:
+  workflow_dispatch:
+    inputs:
+      from_track:
+        description: 'Promote FROM track'
+        required: true
+        default: internal
+        type: choice
+        options: [internal, alpha, beta]
+
+      to_track:
+        description: 'Promote TO track'
+        required: true
+        default: alpha
+        type: choice
+        options: [alpha, beta, production]
+
+      rollout_percentage:
+        description: 'Staged rollout % for production (1–100, ignored for other tracks)'
+        required: false
+        default: '10'
+
+      version_code:
+        description: 'versionCode to promote (leave blank for latest in from_track)'
+        required: false
+        default: ''
+
+env:
+  PACKAGE_NAME: com.labs.quran
+
+jobs:
+  promote:
+    name: '${{ inputs.from_track }} → ${{ inputs.to_track }}'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ── Resolve rollout fraction ─────────────────────────────────────────────
+      - name: Compute rollout fraction
+        id: rollout
+        run: |
+          if [[ "${{ inputs.to_track }}" == "production" ]]; then
+            PCT="${{ inputs.rollout_percentage }}"
+            # clamp to 1–100
+            PCT=$(( PCT < 1   ? 1   : PCT ))
+            PCT=$(( PCT > 100 ? 100 : PCT ))
+            echo "fraction=$(echo "scale=2; $PCT/100" | bc)" >> "$GITHUB_OUTPUT"
+          else
+            echo "fraction=1.0" >> "$GITHUB_OUTPUT"
+          fi
+
+      # ── Promote via Play Developer API ───────────────────────────────────────
+      - name: Promote release
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_JSON }}
+          packageName: ${{ env.PACKAGE_NAME }}
+          track: ${{ inputs.to_track }}
+          fromTrack: ${{ inputs.from_track }}
+          status: ${{ inputs.to_track == 'production' && 'inProgress' || 'completed' }}
+          userFraction: ${{ steps.rollout.outputs.fraction }}
+
+      # ── Summary ──────────────────────────────────────────────────────────────
+      - name: Print summary
+        run: |
+          echo "## Promotion complete ✅" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| | |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| **Package** | \`${{ env.PACKAGE_NAME }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| **From** | \`${{ inputs.from_track }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| **To** | \`${{ inputs.to_track }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          if [[ "${{ inputs.to_track }}" == "production" ]]; then
+            echo "| **Rollout** | ${{ inputs.rollout_percentage }}% |" >> "$GITHUB_STEP_SUMMARY"
+          fi

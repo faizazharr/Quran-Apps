@@ -95,7 +95,10 @@ class SleepTimerBloc extends Bloc<SleepTimerEvent, SleepTimerState> {
     on<_SleepTimerTicked>(_onTicked);
   }
 
-  void _onStarted(SleepTimerStartRequested event, Emitter<SleepTimerState> emit) {
+  void _onStarted(
+    SleepTimerStartRequested event,
+    Emitter<SleepTimerState> emit,
+  ) {
     unawaited(_tickSub?.cancel());
     _tickSub = null;
 
@@ -126,7 +129,10 @@ class SleepTimerBloc extends Bloc<SleepTimerEvent, SleepTimerState> {
     });
   }
 
-  void _onCancelled(SleepTimerCancelRequested event, Emitter<SleepTimerState> emit) {
+  void _onCancelled(
+    SleepTimerCancelRequested event,
+    Emitter<SleepTimerState> emit,
+  ) {
     unawaited(_tickSub?.cancel());
     _tickSub = null;
     _tickerService.cancel();

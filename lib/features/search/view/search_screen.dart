@@ -9,15 +9,15 @@ import '../../../data/models/surah.dart';
 import '../../../data/models/track.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/widgets/empty_state_view.dart';
-import '../../ayah/view/ayah_view.dart';
+import '../../activity/widgets/last_activity_card.dart';
 import '../../bookmark/bloc/bookmark_bloc.dart';
 import '../../player/bloc/player_bloc.dart';
 import '../../player/view/player_panel.dart';
 import '../../quote/view/quote_card.dart';
 import '../../settings/view/settings_screen.dart';
 import '../../sleep_timer/bloc/sleep_timer_bloc.dart';
+import '../../surah/view/surah_detail_page.dart';
 import '../bloc/search_bloc.dart';
-import '../widgets/reciter_picker.dart';
 import '../widgets/search_header.dart';
 import '../widgets/surah_tile.dart';
 import '../widgets/track_tile_shimmer.dart';
@@ -88,19 +88,12 @@ class _SearchScreenState extends State<SearchScreen> {
             );
           }
 
-          return Column(
-            children: [
-              Expanded(
-                child: _ListPane(
-                  controller: _controller,
-                  onChanged: _onChanged,
-                  onClear: _onClear,
-                  onRefresh: _refresh,
-                  compactHeader: r.isShortHeight,
-                ),
-              ),
-              const PlayerPanel(),
-            ],
+          return _ListPane(
+            controller: _controller,
+            onChanged: _onChanged,
+            onClear: _onClear,
+            onRefresh: _refresh,
+            compactHeader: r.isShortHeight,
           );
         },
       ),
@@ -188,7 +181,8 @@ class _ListPaneState extends State<_ListPane> {
             onChanged: widget.onChanged,
             onClear: widget.onClear,
             compact: widget.compactHeader,
-            trailing: _HeaderActions(l10n: l10n),
+            trailing: _ContinueListeningChip(l10n: l10n),
+            actions: _SettingsButton(l10n: l10n),
           ),
           Expanded(
             child: BlocBuilder<SearchBloc, SearchState>(
@@ -214,94 +208,87 @@ class _ListPaneState extends State<_ListPane> {
   }
 }
 
-/// Continue chip + Settings icon shown inside the SearchHeader trailing area.
-class _HeaderActions extends StatelessWidget {
+/// "Continue listening" chip — only shown when a last-played bookmark exists.
+/// Rendered below the search field as the SearchHeader [trailing] widget.
+class _ContinueListeningChip extends StatelessWidget {
   final AppLocalizations l10n;
-  const _HeaderActions({required this.l10n});
+  const _ContinueListeningChip({required this.l10n});
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // "Continue listening" chip — only shown when last-played exists.
-        BlocBuilder<BookmarkBloc, BookmarkState>(
-          buildWhen: (prev, curr) => prev.lastPlayed != curr.lastPlayed,
-          builder: (context, bState) {
-            final lp = bState.lastPlayed;
-            if (lp == null) return const SizedBox.shrink();
-            return ActionChip(
-              avatar: const Icon(Icons.play_circle_outline, size: 18),
-              label: Text(
-                l10n.continueListening,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              onPressed: () {
-                final searchState = context.read<SearchBloc>().state;
-                final surah = searchState.surahs
-                    .cast<Surah?>()
-                    .firstWhere(
-                      (s) => s?.number == lp.surahNumber,
-                      orElse: () => null,
-                    );
-                final reciter = searchState.reciters
-                    .cast<Edition?>()
-                    .firstWhere(
-                      (e) => e?.identifier == lp.editionId,
-                      orElse: () => null,
-                    );
-                if (surah == null || reciter == null) return;
-                context.read<PlayerBloc>().add(
-                  PlayerTrackSelectRequested(Track(surah: surah, edition: reciter)),
-                );
-                if (lp.positionMs > 0) {
-                  context.read<PlayerBloc>().add(
-                    PlayerSeekRequested(Duration(milliseconds: lp.positionMs)),
-                  );
-                }
-              },
-            );
-          },
-        ),
-        const SizedBox(width: 4),
-        // Settings button.
-        IconButton(
-          icon: const Icon(Icons.settings_outlined, color: Colors.white),
-          tooltip: l10n.settings,
-          onPressed: () => Navigator.of(context).push(
-            MaterialPageRoute<void>(
-              builder: (_) => MultiBlocProvider(
-                providers: [
-                  BlocProvider.value(value: context.read<BookmarkBloc>()),
-                  BlocProvider.value(value: context.read<SleepTimerBloc>()),
-                ],
-                child: const SettingsScreen(),
-              ),
-            ),
+    return BlocBuilder<BookmarkBloc, BookmarkState>(
+      buildWhen: (prev, curr) => prev.lastPlayed != curr.lastPlayed,
+      builder: (context, bState) {
+        final lp = bState.lastPlayed;
+        if (lp == null) return const SizedBox.shrink();
+        return ActionChip(
+          avatar: const Icon(Icons.play_circle_outline, size: 18),
+          label: Text(
+            l10n.continueListening,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
-        ),
-      ],
+          onPressed: () {
+            final searchState = context.read<SearchBloc>().state;
+            final surah = searchState.surahs.cast<Surah?>().firstWhere(
+              (s) => s?.number == lp.surahNumber,
+              orElse: () => null,
+            );
+            if (surah == null) return;
+
+            final playerState = context.read<PlayerBloc>().state;
+            final sameTrack =
+                playerState.track?.surah.number == lp.surahNumber &&
+                playerState.track?.edition.identifier == lp.editionId;
+
+            if (!sameTrack) {
+              // Different or no track — load it and restore the saved position.
+              final reciter = searchState.reciters.cast<Edition?>().firstWhere(
+                (e) => e?.identifier == lp.editionId,
+                orElse: () => null,
+              );
+              if (reciter == null) return;
+              context.read<PlayerBloc>().add(
+                PlayerTrackSelectRequested(
+                  Track(surah: surah, edition: reciter),
+                ),
+              );
+              if (lp.positionMs > 0) {
+                context.read<PlayerBloc>().add(
+                  PlayerSeekRequested(Duration(milliseconds: lp.positionMs)),
+                );
+              }
+            }
+            // Navigate to the surah detail page whether or not we reloaded.
+            unawaited(SurahDetailPage.show(context, surah));
+          },
+        );
+      },
     );
   }
 }
 
-/// Shows the reciter picker and plays the selected track.
-/// Called both on first-tap (no reciter) and on long-press (switch reciter).
-Future<void> _showReciterPickerFor(BuildContext context, Surah surah) async {
-  final searchBloc = context.read<SearchBloc>();
-  final reciters = searchBloc.state.reciters;
-  if (reciters.isEmpty) return;
-  final picked = await showReciterPicker(
-    context,
-    reciters: reciters,
-    selected: searchBloc.state.selectedReciter,
-    surahName: surah.englishName,
-  );
-  if (picked != null && context.mounted) {
-    searchBloc.add(SearchReciterChanged(picked));
-    context.read<PlayerBloc>().add(
-      PlayerTrackSelectRequested(Track(surah: surah, edition: picked)),
+/// Settings icon placed at the top-right of the SearchHeader logo row.
+class _SettingsButton extends StatelessWidget {
+  final AppLocalizations l10n;
+  const _SettingsButton({required this.l10n});
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      icon: const Icon(Icons.settings_outlined, color: Colors.white),
+      tooltip: l10n.settings,
+      onPressed: () => Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => MultiBlocProvider(
+            providers: [
+              BlocProvider.value(value: context.read<BookmarkBloc>()),
+              BlocProvider.value(value: context.read<SleepTimerBloc>()),
+            ],
+            child: const SettingsScreen(),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -335,8 +322,9 @@ class _ResultsList extends StatelessWidget {
                 title: 'Something went wrong',
                 subtitle: state.errorMessage,
                 actionLabel: 'Try again',
-                onAction: () =>
-                    context.read<SearchBloc>().add(const SearchRefreshRequested()),
+                onAction: () => context.read<SearchBloc>().add(
+                  const SearchRefreshRequested(),
+                ),
               ),
             ),
           ],
@@ -366,7 +354,10 @@ class _ResultsList extends StatelessWidget {
     final visible = state.visibleSurahs;
     final hasMore = state.hasMore;
     final showQuote = state.query.trim().isEmpty;
-    final extraCount = showQuote ? 1 : 0;
+    // Extra items at the top when not searching:
+    //   index 0 → LastActivityCard (self-hides when no activity)
+    //   index 1 → QuoteCard
+    final extraCount = showQuote ? 2 : 0;
 
     return BlocBuilder<PlayerBloc, PlayerState>(
       buildWhen: (prev, curr) =>
@@ -388,10 +379,13 @@ class _ResultsList extends StatelessWidget {
           cacheExtent: 400,
           itemBuilder: (context, index) {
             if (showQuote && index == 0) {
+              return const LastActivityCard();
+            }
+            if (showQuote && index == 1) {
               return const RepaintBoundary(child: QuoteCard());
             }
 
-            final adjustedIndex = showQuote ? index - 1 : index;
+            final adjustedIndex = showQuote ? index - 2 : index;
 
             if (adjustedIndex == visible.length) {
               return _PaginationFooter(
@@ -408,31 +402,9 @@ class _ResultsList extends StatelessWidget {
                 isActive: isActive,
                 isPlaying: isActive && playerState.isPlaying,
                 isLoading: isActive && playerState.isLoading,
-                onReadTap: () {
-                  unawaited(
-                    AyahView.show(
-                      context,
-                      surahNumber: surah.number,
-                      surah: surah,
-                    ),
-                  );
-                },
-                onTap: () {
-                  final searchBloc = context.read<SearchBloc>();
-                  final selectedReciter = searchBloc.state.selectedReciter;
-                  // If a reciter is already selected, play immediately.
-                  if (selectedReciter != null) {
-                    context.read<PlayerBloc>().add(
-                      PlayerTrackSelectRequested(
-                        Track(surah: surah, edition: selectedReciter),
-                      ),
-                    );
-                    return;
-                  }
-                  // No reciter selected yet — fall through to picker.
-                  unawaited(_showReciterPickerFor(context, surah));
-                },
-                onLongPress: () => _showReciterPickerFor(context, surah),
+                // Tap always navigates to the detail page — play is intentional
+                // from within SurahDetailPage, not a side-effect of browsing.
+                onTap: () => unawaited(SurahDetailPage.show(context, surah)),
               ),
             );
           },

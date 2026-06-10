@@ -13,6 +13,10 @@ Future<void> main() async {
     androidNotificationChannelName: 'Quran Player',
     androidNotificationOngoing: true,
     androidStopForegroundOnPause: true,
+    // Brand primary green — tints the notification accent on Android 8+.
+    notificationColor: const Color(0xFF0F7C5A),
+    // Use the app launcher icon as the small status-bar icon.
+    androidNotificationIcon: 'mipmap/ic_launcher',
   );
 
   await configureDependencies();

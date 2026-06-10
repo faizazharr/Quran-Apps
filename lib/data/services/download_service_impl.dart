@@ -94,7 +94,11 @@ class DownloadServiceImpl implements IDownloadService {
             throw const RemoteException('Download URL must use HTTPS.');
           }
 
-          await _updateStatus(surahNumber, editionId, DownloadStatus.downloading);
+          await _updateStatus(
+            surahNumber,
+            editionId,
+            DownloadStatus.downloading,
+          );
           unawaited(_notifyListeners());
 
           final dir = await _ensureDir();

@@ -1,0 +1,151 @@
+name: CD — iOS
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Triggers on the same version tag as cd-android.yml so both platforms ship
+# together from a single `git tag v1.x.y+N && git push --tags`.
+#
+# Required repository secrets
+# ───────────────────────────
+#   IOS_DIST_P12_BASE64       base64-encoded Apple Distribution certificate (.p12)
+#                             → Keychain Access → export → base64 -i cert.p12 | pbcopy
+#   IOS_DIST_P12_PASSWORD     password used when exporting the .p12
+#   IOS_PROVISION_BASE64      base64-encoded App Store distribution provisioning
+#                             profile (.mobileprovision)
+#                             → base64 -i "Quran Player.mobileprovision" | pbcopy
+#   ASC_KEY_ID                App Store Connect API key ID  (e.g. ABC1234DEF)
+#   ASC_ISSUER_ID             App Store Connect issuer UUID
+#   ASC_KEY_CONTENT           Contents of the .p8 private key (NOT base64 — paste raw)
+#                             → create at appstoreconnect.apple.com/access/api
+# ─────────────────────────────────────────────────────────────────────────────
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+\+[0-9]+'   # e.g. v1.2.0+5
+
+concurrency:
+  group: cd-ios-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  FLUTTER_VERSION: '3.x'
+  BUNDLE_ID: com.labs.quran
+
+jobs:
+  # ── 1. Validate ─────────────────────────────────────────────────────────────
+  validate:
+    name: Analyze · Test
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+      - run: flutter analyze --fatal-infos
+      - run: flutter test
+
+  # ── 2. Build & Publish ───────────────────────────────────────────────────────
+  build-and-publish:
+    name: Build IPA · Sign · TestFlight
+    runs-on: macos-latest
+    needs: validate
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      # ── Apple Distribution Certificate ───────────────────────────────────────
+      - name: Install distribution certificate
+        env:
+          CERT_BASE64: ${{ secrets.IOS_DIST_P12_BASE64 }}
+          CERT_PASSWORD: ${{ secrets.IOS_DIST_P12_PASSWORD }}
+        run: |
+          KEYCHAIN_PATH=$RUNNER_TEMP/build.keychain
+          CERT_PATH=$RUNNER_TEMP/dist.p12
+
+          # Decode certificate
+          echo "$CERT_BASE64" | base64 --decode > "$CERT_PATH"
+
+          # Create a temporary keychain so we don't pollute the login keychain
+          security create-keychain -p "" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 3600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "" "$KEYCHAIN_PATH"
+          security default-keychain -s "$KEYCHAIN_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH" login.keychain
+
+          # Import the .p12
+          security import "$CERT_PATH" \
+            -k "$KEYCHAIN_PATH" \
+            -P "$CERT_PASSWORD" \
+            -T /usr/bin/codesign \
+            -T /usr/bin/productbuild
+          security set-key-partition-list \
+            -S apple-tool:,apple:,codesign: -s -k "" "$KEYCHAIN_PATH"
+
+      # ── Provisioning Profile ─────────────────────────────────────────────────
+      - name: Install provisioning profile
+        run: |
+          PROFILE_DIR=~/Library/MobileDevice/Provisioning\ Profiles
+          mkdir -p "$PROFILE_DIR"
+          echo "${{ secrets.IOS_PROVISION_BASE64 }}" \
+            | base64 --decode > "$PROFILE_DIR/quran_player_dist.mobileprovision"
+
+      # ── App Store Connect API Key ─────────────────────────────────────────────
+      - name: Write ASC API key
+        run: |
+          KEY_DIR=~/.appstoreconnect/private_keys
+          mkdir -p "$KEY_DIR"
+          echo "${{ secrets.ASC_KEY_CONTENT }}" \
+            > "$KEY_DIR/AuthKey_${{ secrets.ASC_KEY_ID }}.p8"
+
+      # ── Build ────────────────────────────────────────────────────────────────
+      - name: Build release IPA
+        run: |
+          flutter build ipa --release \
+            --export-options-plist=ios/ExportOptions.plist
+
+      # ── Upload artifact ──────────────────────────────────────────────────────
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: quran-player-${{ github.ref_name }}.ipa
+          path: build/ios/ipa/*.ipa
+          retention-days: 30
+
+      # ── Publish to TestFlight ────────────────────────────────────────────────
+      - name: Upload to TestFlight
+        run: |
+          IPA_PATH=$(find build/ios/ipa -name "*.ipa" | head -1)
+          xcrun altool \
+            --upload-app \
+            --type ios \
+            --file "$IPA_PATH" \
+            --apiKey "${{ secrets.ASC_KEY_ID }}" \
+            --apiIssuer "${{ secrets.ASC_ISSUER_ID }}" \
+            --apiInternalPrivateKey \
+              "$(cat ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.ASC_KEY_ID }}.p8)"
+
+      # ── GitHub Release ───────────────────────────────────────────────────────
+      - name: Attach IPA to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/ios/ipa/*.ipa
+
+      # ── Cleanup sensitive files ──────────────────────────────────────────────
+      - name: Clean up secrets from disk
+        if: always()
+        run: |
+          rm -f ~/.appstoreconnect/private_keys/AuthKey_*.p8
+          security delete-keychain "$RUNNER_TEMP/build.keychain" 2>/dev/null || true

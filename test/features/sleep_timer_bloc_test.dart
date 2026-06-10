@@ -7,8 +7,7 @@ import 'package:quran_apps/features/sleep_timer/bloc/sleep_timer_bloc.dart';
 
 /// Fake ticker that lets tests emit ticks manually — no wall-clock waiting.
 class FakeTicker implements ITickerService {
-  final StreamController<int> _controller =
-      StreamController<int>.broadcast();
+  final StreamController<int> _controller = StreamController<int>.broadcast();
 
   void emitTick() => _controller.add(0);
 

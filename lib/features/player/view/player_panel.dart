@@ -5,8 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/theme/app_theme.dart';
-import '../../../core/utils/duration_formatter.dart';
 import '../../../data/models/track.dart';
+import '../../../shared/widgets/player_seek_bar.dart';
 import '../../ayah/view/ayah_view.dart';
 import '../../bookmark/bloc/bookmark_bloc.dart';
 import '../../search/bloc/search_bloc.dart';
@@ -67,7 +67,7 @@ class _PanelContent extends StatelessWidget {
         children: [
           _Header(),
           SizedBox(height: 12),
-          RepaintBoundary(child: _SeekBar()),
+          RepaintBoundary(child: PlayerSeekBar()),
           SizedBox(height: 4),
           _Controls(),
         ],
@@ -269,113 +269,6 @@ class _HeaderVM extends Equatable {
   List<Object?> get props => [track?.id, isError, errorMessage];
 }
 
-class _SeekBar extends StatefulWidget {
-  const _SeekBar();
-
-  @override
-  State<_SeekBar> createState() => _SeekBarState();
-}
-
-class _SeekBarState extends State<_SeekBar> {
-  double? _dragValue;
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocListener<PlayerBloc, PlayerState>(
-      listenWhen: (prev, curr) => prev.track?.id != curr.track?.id,
-      listener: (context, state) {
-        setState(() {
-          _dragValue = null;
-        });
-      },
-      child: BlocBuilder<PlayerBloc, PlayerState>(
-        buildWhen: (prev, curr) =>
-            prev.position != curr.position ||
-            prev.duration != curr.duration ||
-            prev.status != curr.status,
-        builder: (context, state) {
-          final totalMs = state.duration.inMilliseconds;
-          final max = totalMs > 0 ? totalMs.toDouble() : 1.0;
-          final liveMs = state.position.inMilliseconds.clamp(0, totalMs);
-          final value = (_dragValue ?? liveMs.toDouble()).clamp(0.0, max);
-
-          return Column(
-            children: [
-              SliderTheme(
-                data: SliderTheme.of(context).copyWith(
-                  activeTrackColor: Colors.white,
-                  inactiveTrackColor: Colors.white.withValues(alpha: 0.25),
-                  thumbColor: Colors.white,
-                  overlayColor: Colors.white.withValues(alpha: 0.2),
-                  trackHeight: 3,
-                ),
-                child: Slider(
-                  value: value,
-                  max: max,
-                  onChanged: totalMs > 0
-                      ? (v) => setState(() => _dragValue = v)
-                      : null,
-                  onChangeEnd: totalMs > 0
-                      ? (v) {
-                          context.read<PlayerBloc>().add(
-                            PlayerSeekRequested(
-                              Duration(milliseconds: v.round()),
-                            ),
-                          );
-                          setState(() => _dragValue = null);
-                        }
-                      : null,
-                ),
-              ),
-              if (state.status == PlaybackStatus.loading)
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 22,
-                    vertical: 4,
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(999),
-                    child: LinearProgressIndicator(
-                      minHeight: 2,
-                      color: Colors.white,
-                      backgroundColor: Colors.white.withValues(alpha: 0.25),
-                    ),
-                  ),
-                )
-              else
-                const SizedBox(height: 10),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      DurationFormatter.format(
-                        Duration(milliseconds: value.round()),
-                      ),
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 12,
-                      ),
-                    ),
-                    Text(
-                      DurationFormatter.format(state.duration),
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-}
-
 class _Controls extends StatelessWidget {
   const _Controls();
 
@@ -389,6 +282,7 @@ class _Controls extends StatelessWidget {
       selector: (s) => _ControlsVM(
         isPlaying: s.isPlaying,
         isLoading: s.isLoading,
+        isCompleted: s.status == PlaybackStatus.completed,
         speed: s.speed,
       ),
       builder: (context, vm) {
@@ -401,19 +295,33 @@ class _Controls extends StatelessWidget {
               onTap: () => _jumpToAdjacent(context, -1),
             ),
             _GhostButton(
-              icon: Icons.replay_rounded,
-              onTap: () => bloc.add(const PlayerSeekRequested(Duration.zero)),
+              icon: Icons.replay_10_rounded,
+              onTap: () {
+                final pos = bloc.state.position;
+                bloc.add(
+                  PlayerSeekRequested(pos - const Duration(seconds: 10)),
+                );
+              },
             ),
             _PrimaryButton(
-              icon: vm.isPlaying
-                  ? Icons.pause_rounded
-                  : Icons.play_arrow_rounded,
+              icon: vm.isCompleted
+                  ? Icons.replay_rounded
+                  : (vm.isPlaying
+                        ? Icons.pause_rounded
+                        : Icons.play_arrow_rounded),
               loading: vm.isLoading,
-              onTap: () => bloc.add(
-                vm.isPlaying
-                    ? const PlayerPauseRequested()
-                    : const PlayerPlayRequested(),
-              ),
+              onTap: () {
+                if (vm.isCompleted) {
+                  bloc.add(const PlayerSeekRequested(Duration.zero));
+                  bloc.add(const PlayerPlayRequested());
+                } else {
+                  bloc.add(
+                    vm.isPlaying
+                        ? const PlayerPauseRequested()
+                        : const PlayerPlayRequested(),
+                  );
+                }
+              },
             ),
             _GhostButton(
               icon: Icons.forward_10_rounded,
@@ -443,14 +351,16 @@ class _Controls extends StatelessWidget {
 class _ControlsVM extends Equatable {
   final bool isPlaying;
   final bool isLoading;
+  final bool isCompleted;
   final double speed;
   const _ControlsVM({
     required this.isPlaying,
     required this.isLoading,
+    required this.isCompleted,
     required this.speed,
   });
   @override
-  List<Object?> get props => [isPlaying, isLoading, speed];
+  List<Object?> get props => [isPlaying, isLoading, isCompleted, speed];
 }
 
 /// Navigates to the previous (delta = -1) or next (delta = +1) surah,
@@ -473,7 +383,9 @@ void _jumpToAdjacent(BuildContext context, int delta) {
 
   final nextSurah = surahs[nextIndex];
   playerBloc.add(
-    PlayerTrackSelectRequested(Track(surah: nextSurah, edition: currentTrack.edition)),
+    PlayerTrackSelectRequested(
+      Track(surah: nextSurah, edition: currentTrack.edition),
+    ),
   );
 }
 
@@ -484,15 +396,17 @@ class _GhostButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white.withValues(alpha: 0.16),
-      shape: const CircleBorder(),
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(10),
-          child: Icon(icon, color: Colors.white, size: 22),
+    // Minimum 44×44 dp tap area (WCAG / Apple HIG / Material accessibility).
+    return SizedBox(
+      width: 44,
+      height: 44,
+      child: Material(
+        color: Colors.white.withValues(alpha: 0.16),
+        shape: const CircleBorder(),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onTap,
+          child: Center(child: Icon(icon, color: Colors.white, size: 22)),
         ),
       ),
     );

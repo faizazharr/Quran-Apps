@@ -4,16 +4,19 @@ import '../../../core/theme/app_theme.dart';
 import '../../../data/models/surah.dart';
 
 /// Card-style list item for a single Surah.
-/// All tiles have a fixed layout height of 76 px so the parent ListView can
-/// use [itemExtent] and skip per-item layout measurement entirely.
+///
+/// Tapping the tile navigates to [SurahDetailPage] — it no longer triggers
+/// immediate playback. The trailing indicator reflects the current player
+/// state (loading / playing / idle) without acting as a button itself.
+///
+/// All tiles share the same intrinsic height so the parent ListView can use
+/// `itemExtent` and skip per-item layout measurement.
 class SurahTile extends StatelessWidget {
   final Surah surah;
   final bool isActive;
   final bool isPlaying;
   final bool isLoading;
   final VoidCallback onTap;
-  final VoidCallback? onLongPress;
-  final VoidCallback onReadTap;
 
   const SurahTile({
     super.key,
@@ -22,32 +25,24 @@ class SurahTile extends StatelessWidget {
     required this.isPlaying,
     required this.isLoading,
     required this.onTap,
-    this.onLongPress,
-    required this.onReadTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    // Pre-compute all colors once — avoids repeated Color object allocation
-    // inside child widgets and TweenAnimationBuilder frames.
+    // Pre-compute colors once — avoids repeated allocation inside child
+    // widgets and TweenAnimationBuilder frames.
     final activeColor = scheme.primary;
     final activeBg = scheme.primary.withValues(alpha: 0.10);
     final inactiveBg = scheme.surface;
-    final activeBorder = activeColor.withValues(alpha: 0.4);
-    final inactiveBorder = scheme.outlineVariant.withValues(alpha: 0.5);
+    final activeBorder = activeColor.withValues(alpha: 0.40);
+    final inactiveBorder = scheme.outlineVariant.withValues(alpha: 0.50);
     final onSurface = scheme.onSurface;
     final onSurfaceVariant = scheme.onSurfaceVariant;
     final primaryContainer = scheme.primaryContainer;
     final onPrimaryContainer = scheme.onPrimaryContainer;
-    final surfaceContainerHighest = scheme.surfaceContainerHighest;
-    final secondaryContainer = scheme.secondaryContainer;
-    final onSecondaryContainer = scheme.onSecondaryContainer;
-    final onPrimary = scheme.onPrimary;
 
-    // AnimatedContainer handles the active↔inactive color transition without
-    // a separate AnimationController/Ticker per tile.
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
       child: AnimatedContainer(
@@ -64,7 +59,6 @@ class SurahTile extends StatelessWidget {
           child: InkWell(
             borderRadius: BorderRadius.circular(20),
             onTap: onTap,
-            onLongPress: onLongPress,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               child: Row(
@@ -84,7 +78,7 @@ class SurahTile extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        // Title row — English name (flex) + Arabic name
+                        // English name (flex) + Arabic name
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
@@ -110,16 +104,16 @@ class SurahTile extends StatelessWidget {
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
                                   color: onSurfaceVariant,
-                                  fontFamily: 'serif',
-                                  fontSize: 15,
-                                  height: 1.2,
+                                  fontFamily: 'Scheherazade New',
+                                  fontSize: 16,
+                                  height: 1.4,
                                 ),
                               ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 3),
-                        // Subtitle row — translation + ayah count
+                        // Translation + ayah count sub-row
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
@@ -151,24 +145,14 @@ class SurahTile extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  _ReadButton(
-                    onTap: onReadTap,
-                    isActive: isActive,
-                    bgColor: isActive
-                        ? secondaryContainer
-                        : surfaceContainerHighest,
-                    fgColor: isActive ? onSecondaryContainer : onSurface,
-                  ),
-                  const SizedBox(width: 6),
-                  _TrailingControl(
+                  const SizedBox(width: 10),
+                  // Navigation / playback-state indicator — not tappable.
+                  _NavIndicator(
                     isActive: isActive,
                     isPlaying: isPlaying,
                     isLoading: isLoading,
-                    activeBg: activeColor,
-                    inactiveBg: surfaceContainerHighest,
-                    activeFg: onPrimary,
-                    inactiveFg: onSurface,
+                    activeColor: activeColor,
+                    mutedColor: onSurfaceVariant.withValues(alpha: 0.60),
                   ),
                 ],
               ),
@@ -180,7 +164,8 @@ class SurahTile extends StatelessWidget {
   }
 }
 
-// Shared const dot — allocated once, never rebuilt.
+// ── Shared dot separator ──────────────────────────────────────────────────
+
 const Widget _dot = _Dot();
 
 class _Dot extends StatelessWidget {
@@ -199,6 +184,8 @@ class _Dot extends StatelessWidget {
     );
   }
 }
+
+// ── Number badge ─────────────────────────────────────────────────────────
 
 class _NumberBadge extends StatelessWidget {
   final int number;
@@ -226,87 +213,72 @@ class _NumberBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
       ),
       alignment: Alignment.center,
-      child: Text(
-        '$number',
-        style: TextStyle(
-          color: active ? Colors.white : inactiveFg,
-          fontWeight: FontWeight.w700,
+      // FittedBox scales down 3-digit numbers (100–114) on narrow screens.
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Padding(
+          padding: const EdgeInsets.all(4),
+          child: Text(
+            '$number',
+            style: TextStyle(
+              color: active ? Colors.white : inactiveFg,
+              fontWeight: FontWeight.w700,
+              fontSize: 15,
+            ),
+          ),
         ),
       ),
     );
   }
 }
 
-class _TrailingControl extends StatelessWidget {
+// ── Navigation / playback-state indicator ────────────────────────────────
+
+/// Shows the player state for this surah without being an interactive button.
+///
+/// • Loading (active) → spinner
+/// • Playing (active) → equalizer icon
+/// • Paused  (active) → play-circle outline
+/// • Inactive         → chevron-right (navigation affordance)
+class _NavIndicator extends StatelessWidget {
   final bool isActive;
   final bool isPlaying;
   final bool isLoading;
-  final Color activeBg;
-  final Color inactiveBg;
-  final Color activeFg;
-  final Color inactiveFg;
+  final Color activeColor;
+  final Color mutedColor;
 
-  const _TrailingControl({
+  const _NavIndicator({
     required this.isActive,
     required this.isPlaying,
     required this.isLoading,
-    required this.activeBg,
-    required this.inactiveBg,
-    required this.activeFg,
-    required this.inactiveFg,
+    required this.activeColor,
+    required this.mutedColor,
   });
 
   @override
   Widget build(BuildContext context) {
     if (isActive && isLoading) {
-      return const SizedBox(
+      return SizedBox(
         width: 22,
         height: 22,
-        child: CircularProgressIndicator(strokeWidth: 2.4),
+        child: CircularProgressIndicator(strokeWidth: 2.4, color: activeColor),
       );
     }
-    return Container(
-      width: 38,
-      height: 38,
-      decoration: BoxDecoration(
-        color: isActive ? activeBg : inactiveBg,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Icon(
-        isActive && isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-        color: isActive ? activeFg : inactiveFg,
-        size: 22,
-      ),
-    );
-  }
-}
 
-class _ReadButton extends StatelessWidget {
-  final VoidCallback onTap;
-  final bool isActive;
-  final Color bgColor;
-  final Color fgColor;
+    if (isActive && isPlaying) {
+      return Icon(Icons.equalizer_rounded, color: activeColor, size: 24);
+    }
 
-  const _ReadButton({
-    required this.onTap,
-    required this.isActive,
-    required this.bgColor,
-    required this.fgColor,
-  });
+    if (isActive) {
+      // Paused on this surah — paused-circle outline.
+      return Icon(
+        Icons.play_circle_outline_rounded,
+        color: activeColor,
+        size: 24,
+      );
+    }
 
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 38,
-        height: 38,
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Icon(Icons.menu_book_rounded, color: fgColor, size: 20),
-      ),
-    );
+    // Inactive — chevron signals "tap to navigate".
+    return Icon(Icons.chevron_right_rounded, color: mutedColor, size: 24);
   }
 }

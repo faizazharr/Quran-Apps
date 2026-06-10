@@ -159,7 +159,9 @@ class DownloadBloc extends Bloc<DownloadEvent, DownloadState> {
   }
 
   void _onUpdated(_DownloadsUpdated event, Emitter<DownloadState> emit) {
-    emit(state.copyWith(status: DownloadBlocStatus.ready, records: event.records));
+    emit(
+      state.copyWith(status: DownloadBlocStatus.ready, records: event.records),
+    );
   }
 
   @override

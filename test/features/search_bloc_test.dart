@@ -42,15 +42,15 @@ void main() {
 
   setUp(() {
     repo = MockQuranRepository();
-    when(() => repo.getReciters()).thenAnswer(
-      (_) async => const Success([_reciter]),
-    );
-    when(() => repo.getSurahs()).thenAnswer(
-      (_) async => const Success([_surah1, _surah2]),
-    );
-    when(() => repo.searchSurahs(any())).thenAnswer(
-      (_) async => const Success([_surah1]),
-    );
+    when(
+      () => repo.getReciters(),
+    ).thenAnswer((_) async => const Success([_reciter]));
+    when(
+      () => repo.getSurahs(),
+    ).thenAnswer((_) async => const Success([_surah1, _surah2]));
+    when(
+      () => repo.searchSurahs(any()),
+    ).thenAnswer((_) async => const Success([_surah1]));
   });
 
   group('SearchBloc — SearchLoadRequested', () {
@@ -64,20 +64,16 @@ void main() {
             .having((s) => s.status, 'status', SearchStatus.success)
             .having((s) => s.surahs, 'surahs', [_surah1, _surah2])
             .having((s) => s.reciters, 'reciters', [_reciter])
-            .having(
-              (s) => s.selectedReciter,
-              'selectedReciter',
-              _reciter,
-            ),
+            .having((s) => s.selectedReciter, 'selectedReciter', _reciter),
       ],
     );
 
     blocTest<SearchBloc, SearchState>(
       'emits failure when repository returns error',
       build: () {
-        when(() => repo.getSurahs()).thenAnswer(
-          (_) async => const Failure(RemoteException('err')),
-        );
+        when(
+          () => repo.getSurahs(),
+        ).thenAnswer((_) async => const Failure(RemoteException('err')));
         return SearchBloc(repo);
       },
       act: (bloc) => bloc.add(const SearchLoadRequested()),

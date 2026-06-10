@@ -12,6 +12,7 @@ import '../../data/datasources/quran_remote_data_source.dart';
 import '../../data/datasources/quran_remote_data_source_impl.dart';
 import '../../data/datasources/settings_data_source.dart';
 import '../../data/datasources/settings_data_source_impl.dart';
+import '../../data/repositories/activity_repository.dart';
 import '../../data/repositories/ayah_repository.dart';
 import '../../data/repositories/ayah_repository_impl.dart';
 import '../../data/repositories/bookmark_repository.dart';
@@ -27,6 +28,7 @@ import '../../data/services/download_service.dart';
 import '../../data/services/download_service_impl.dart';
 import '../../data/services/just_audio_player_service.dart';
 import '../../data/services/quote_service.dart';
+import '../../features/activity/bloc/activity_bloc.dart';
 import '../../features/ayah/bloc/ayah_bloc.dart';
 import '../../features/bookmark/bloc/bookmark_bloc.dart';
 import '../../features/download/bloc/download_bloc.dart';
@@ -105,6 +107,7 @@ Future<void> configureDependencies() async {
   sl.registerLazySingleton<ISettingsRepository>(
     () => SettingsRepositoryImpl(sl<ISettingsDataSource>()),
   );
+  sl.registerLazySingleton<IActivityRepository>(ActivityRepositoryImpl.new);
   sl.registerLazySingleton<IQuoteService>(
     () => QuoteServiceImpl(
       quranRepo: sl<IQuranRepository>(),
@@ -123,9 +126,7 @@ Future<void> configureDependencies() async {
   sl.registerFactory<SettingsBloc>(
     () => SettingsBloc(sl<ISettingsRepository>()),
   );
-  sl.registerFactory<SearchBloc>(
-    () => SearchBloc(sl<IQuranRepository>()),
-  );
+  sl.registerFactory<SearchBloc>(() => SearchBloc(sl<IQuranRepository>()));
   sl.registerFactory<PlayerBloc>(
     () => PlayerBloc(
       sl<IAudioPlayerService>(),
@@ -138,14 +139,13 @@ Future<void> configureDependencies() async {
   sl.registerFactory<AyahBloc>(
     () => AyahBloc(sl<IAyahRepository>(), sl<ISettingsRepository>()),
   );
-  sl.registerFactory<DownloadBloc>(
-    () => DownloadBloc(sl<IDownloadService>()),
-  );
-  sl.registerFactory<QuoteBloc>(
-    () => QuoteBloc(sl<IQuoteService>()),
-  );
+  sl.registerFactory<DownloadBloc>(() => DownloadBloc(sl<IDownloadService>()));
+  sl.registerFactory<QuoteBloc>(() => QuoteBloc(sl<IQuoteService>()));
   sl.registerFactory<SleepTimerBloc>(
     () => SleepTimerBloc(ticker: sl<ITickerService>()),
+  );
+  sl.registerFactory<ActivityBloc>(
+    () => ActivityBloc(sl<IActivityRepository>()),
   );
 }
 

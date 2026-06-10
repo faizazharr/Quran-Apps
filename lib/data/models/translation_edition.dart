@@ -166,6 +166,105 @@ class TranslationEditions {
     );
   }
 
+  /// Returns the best edition for a full device locale (language + country).
+  ///
+  /// Priority:
+  ///   1. Direct language-code match (same as [forLocale]).
+  ///   2. Country-code fallback — used when the device language has no match
+  ///      in [all] but the country implies a common Muslim-majority language
+  ///      (e.g. `sr_BA` → Bosnian, `ur_PK` → already matched by step 1).
+  ///   3. Ultimate fallback: English (Saheeh International).
+  ///
+  /// [languageCode] is a BCP-47 language code (e.g. `'id'`, `'en'`).
+  /// [countryCode] is an ISO 3166-1 alpha-2 country code (e.g. `'ID'`, `'MY'`).
+  static TranslationEdition forFullLocale(
+    String languageCode, [
+    String? countryCode,
+  ]) {
+    final lang = languageCode.toLowerCase();
+    final country = countryCode?.toUpperCase();
+
+    // 1. Direct language match.
+    final byLang = all.where((e) => e.languageCode == lang).toList();
+    if (byLang.isNotEmpty) return byLang.first;
+
+    // 2. Country-based fallback when the language has no translation entry.
+    if (country != null) {
+      final editionId = _countryFallbacks[country];
+      if (editionId != null) {
+        final edition = findById(editionId);
+        if (edition != null) return edition;
+      }
+    }
+
+    // 3. Default to English.
+    return all.first;
+  }
+
+  /// ISO 3166-1 alpha-2 country code → edition id.
+  /// Used by [forFullLocale] when the device language has no direct match.
+  /// Only references edition ids present in [all].
+  static const Map<String, String> _countryFallbacks = {
+    // Southeast Asia
+    'ID': 'id.indonesian',
+    'MY': 'ms.basmeih',
+    'SG': 'ms.basmeih',
+    'BN': 'ms.basmeih', // Brunei
+    'TH': 'th.thai',
+    // South Asia
+    'PK': 'ur.maududi',
+    'BD': 'bn.bengali',
+    'IN': 'en.sahih', // diverse; English is safest neutral default
+    // Arab world
+    'SA': 'ar.muyassar',
+    'AE': 'ar.muyassar',
+    'EG': 'ar.muyassar',
+    'KW': 'ar.muyassar',
+    'QA': 'ar.muyassar',
+    'BH': 'ar.muyassar',
+    'OM': 'ar.muyassar',
+    'JO': 'ar.muyassar',
+    'IQ': 'ar.muyassar',
+    'LB': 'ar.muyassar',
+    'SY': 'ar.muyassar',
+    'MA': 'ar.muyassar',
+    'TN': 'ar.muyassar',
+    'DZ': 'ar.muyassar',
+    'LY': 'ar.muyassar',
+    'SD': 'ar.muyassar',
+    'YE': 'ar.muyassar',
+    // Eurasia / Central Asia
+    'IR': 'fa.makarem',
+    'TR': 'tr.diyanet',
+    'RU': 'ru.kuliev',
+    'KZ': 'ru.kuliev', // Russian widely spoken in Kazakhstan
+    'UZ': 'ru.kuliev', // Russian fallback for Uzbekistan (no Uzbek entry)
+    'AZ': 'ru.kuliev', // Russian fallback for Azerbaijan
+    // East Asia
+    'CN': 'zh.jian',
+    'TW': 'zh.jian',
+    'HK': 'zh.jian',
+    // West Africa
+    'NG': 'ha.gumi',
+    'NE': 'ha.gumi',
+    // East Africa
+    'SO': 'so.abduh',
+    'TZ': 'sw.barwani',
+    'KE': 'sw.barwani',
+    // Europe
+    'BA': 'bs.korkut', // Bosnia — Serbian speakers use Bosnian edition
+    'HR': 'bs.korkut', // Croatia — closest available
+    'RS': 'bs.korkut', // Serbia — closest available
+    'AL': 'sq.nahi',
+    'XK': 'sq.nahi', // Kosovo
+    'FR': 'fr.hamidullah',
+    'BE': 'fr.hamidullah',
+    'DE': 'de.aburida',
+    'AT': 'de.aburida',
+    'CH': 'de.aburida',
+    'NL': 'nl.keyzer',
+  };
+
   /// Finds an edition by its [id], or returns English as fallback.
   static TranslationEdition? findById(String id) {
     try {

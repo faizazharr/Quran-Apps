@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  IPA export configuration used by `flutter build ipa` in CI.
+
+  signingStyle "manual" tells Xcode to use the explicitly named certificate and
+  provisioning profile rather than letting it auto-select, which prevents
+  "no valid signing identity" failures on a fresh CI runner.
+
+  To find your provisioning profile name:
+    1. Download the profile from developer.apple.com/account/resources/profiles
+    2. Run: security cms -D -i /path/to/profile.mobileprovision | grep -A1 Name
+-->
+<plist version="1.0">
+<dict>
+    <!-- App Store distribution (uploads to TestFlight / App Store) -->
+    <key>method</key>
+    <string>app-store</string>
+
+    <key>signingStyle</key>
+    <string>manual</string>
+
+    <!-- Must match the Common Name of the installed distribution cert exactly -->
+    <key>signingCertificate</key>
+    <string>Apple Distribution</string>
+
+    <!-- Map bundle ID → provisioning profile name -->
+    <key>provisioningProfiles</key>
+    <dict>
+        <key>com.labs.quran</key>
+        <!-- Update this to the exact profile name shown in developer.apple.com -->
+        <string>Quran Player App Store Distribution</string>
+    </dict>
+
+    <!-- Include debug symbols for crash symbolication in Xcode Organizer -->
+    <key>uploadSymbols</key>
+    <true/>
+
+    <!-- Bitcode is deprecated in Xcode 14+ -->
+    <key>compileBitcode</key>
+    <false/>
+
+    <!-- Let Xcode manage the destination (App Store Connect) -->
+    <key>destination</key>
+    <string>export</string>
+</dict>
+</plist>

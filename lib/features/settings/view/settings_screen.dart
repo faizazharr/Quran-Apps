@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../core/responsive/responsive.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../data/models/app_settings.dart';
 import '../../../data/models/translation_edition.dart';
 import '../../../l10n/generated/app_localizations.dart';
@@ -16,120 +18,167 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final theme = Theme.of(context);
+    final r = ResponsiveInfo.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.settings),
-        backgroundColor: theme.colorScheme.primary,
-        foregroundColor: theme.colorScheme.onPrimary,
-      ),
       body: BlocBuilder<SettingsBloc, SettingsState>(
         builder: (context, state) {
           final settings = state.settings;
 
-          return ListView(
-            children: [
-              // --- Theme ---
-              _SectionHeader(l10n.darkMode),
-              RadioGroup<AppThemeMode>(
-                groupValue: settings.themeMode,
-                onChanged: (v) {
-                  if (v != null) {
-                    context.read<SettingsBloc>().add(SettingsThemeChanged(v));
-                  }
-                },
-                child: Column(
-                  children: [
-                    RadioListTile<AppThemeMode>(
-                      title: Text(l10n.themeSystem),
-                      value: AppThemeMode.system,
-                    ),
-                    RadioListTile<AppThemeMode>(
-                      title: Text(l10n.themeLight),
-                      value: AppThemeMode.light,
-                    ),
-                    RadioListTile<AppThemeMode>(
-                      title: Text(l10n.themeDark),
-                      value: AppThemeMode.dark,
-                    ),
-                  ],
-                ),
-              ),
-              const Divider(),
+          // On expanded screens, centre the content at contentMaxWidth.
+          final maxWidth = r.isExpanded ? Breakpoints.contentMaxWidth : null;
 
-              // --- Language ---
-              _SectionHeader(l10n.language),
-              RadioGroup<String?>(
-                groupValue: settings.localeTag,
-                onChanged: (v) =>
-                    context.read<SettingsBloc>().add(SettingsLocaleChanged(v)),
-                child: const Column(
-                  children: [
-                    RadioListTile<String?>(
-                      title: Text('Follow device'),
-                      value: null,
-                    ),
-                    RadioListTile<String?>(title: Text('English'), value: 'en'),
-                    RadioListTile<String?>(
-                      title: Text('Indonesia'),
-                      value: 'id',
-                    ),
-                  ],
-                ),
-              ),
-              const Divider(),
-
-              // --- Translation ---
-              const _SectionHeader('Quran Translation'),
-              _TranslationPicker(current: settings.translationEditionId),
-              const Divider(),
-
-              // --- Sleep Timer ---
-              _SectionHeader(l10n.sleepTimer),
-              ListTile(
-                leading: const Icon(Icons.bedtime_outlined),
-                title: Text(l10n.sleepTimer),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => showDialog<void>(
-                  context: context,
-                  builder: (_) => MultiBlocProvider(
-                    providers: [
-                      BlocProvider.value(value: context.read<PlayerBloc>()),
-                    ],
-                    child: const SleepTimerDialog(),
+          return CustomScrollView(
+            slivers: [
+              // Gradient SliverAppBar — consistent with other gradient headers.
+              SliverAppBar(
+                pinned: true,
+                title: Text(
+                  l10n.settings,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 20,
+                    letterSpacing: 0.2,
                   ),
                 ),
+                iconTheme: const IconThemeData(color: Colors.white),
+                flexibleSpace: Container(
+                  decoration: const BoxDecoration(
+                    gradient: AppColors.brandGradient,
+                  ),
+                ),
+                backgroundColor: Colors.transparent,
               ),
-              const Divider(),
-
-              // --- Bookmarks ---
-              const _SectionHeader('Bookmarks'),
-              BlocBuilder<BookmarkBloc, BookmarkState>(
-                builder: (context, bState) {
-                  if (bState.bookmarks.isEmpty) {
-                    return const ListTile(title: Text('No bookmarks saved.'));
-                  }
-                  return Column(
-                    children: bState.bookmarks.map((b) {
-                      return ListTile(
-                        leading: const Icon(Icons.bookmark_outline),
-                        title: Text('Surah ${b.surahNumber}'),
-                        subtitle: Text(b.editionId),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.delete_outline),
-                          tooltip: 'Delete',
-                          onPressed: () => context.read<BookmarkBloc>().add(
-                            BookmarkDeleteRequested(b.id!),
+              SliverToBoxAdapter(
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: maxWidth ?? double.infinity,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // --- Theme ---
+                        _SectionHeader(l10n.darkMode),
+                        RadioGroup<AppThemeMode>(
+                          groupValue: settings.themeMode,
+                          onChanged: (v) {
+                            if (v != null) {
+                              context.read<SettingsBloc>().add(
+                                SettingsThemeChanged(v),
+                              );
+                            }
+                          },
+                          child: Column(
+                            children: [
+                              RadioListTile<AppThemeMode>(
+                                title: Text(l10n.themeSystem),
+                                value: AppThemeMode.system,
+                              ),
+                              RadioListTile<AppThemeMode>(
+                                title: Text(l10n.themeLight),
+                                value: AppThemeMode.light,
+                              ),
+                              RadioListTile<AppThemeMode>(
+                                title: Text(l10n.themeDark),
+                                value: AppThemeMode.dark,
+                              ),
+                            ],
                           ),
                         ),
-                      );
-                    }).toList(),
-                  );
-                },
-              ),
-            ],
-          );
+                        const Divider(),
+
+                        // --- Language ---
+                        _SectionHeader(l10n.language),
+                        RadioGroup<String?>(
+                          groupValue: settings.localeTag,
+                          onChanged: (v) => context.read<SettingsBloc>().add(
+                            SettingsLocaleChanged(v),
+                          ),
+                          child: const Column(
+                            children: [
+                              RadioListTile<String?>(
+                                title: Text('Follow device'),
+                                value: null,
+                              ),
+                              RadioListTile<String?>(
+                                title: Text('English'),
+                                value: 'en',
+                              ),
+                              RadioListTile<String?>(
+                                title: Text('Indonesia'),
+                                value: 'id',
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Divider(),
+
+                        // --- Translation ---
+                        const _SectionHeader('Quran Translation'),
+                        _TranslationPicker(
+                          current: settings.translationEditionId,
+                        ),
+                        const Divider(),
+
+                        // --- Sleep Timer ---
+                        _SectionHeader(l10n.sleepTimer),
+                        ListTile(
+                          leading: const Icon(Icons.bedtime_outlined),
+                          title: Text(l10n.sleepTimer),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () => showDialog<void>(
+                            context: context,
+                            builder: (_) => MultiBlocProvider(
+                              providers: [
+                                BlocProvider.value(
+                                  value: context.read<PlayerBloc>(),
+                                ),
+                              ],
+                              child: const SleepTimerDialog(),
+                            ),
+                          ),
+                        ),
+                        const Divider(),
+
+                        // --- Bookmarks ---
+                        const _SectionHeader('Bookmarks'),
+                        BlocBuilder<BookmarkBloc, BookmarkState>(
+                          builder: (context, bState) {
+                            if (bState.bookmarks.isEmpty) {
+                              return const ListTile(
+                                title: Text('No bookmarks saved.'),
+                              );
+                            }
+                            return Column(
+                              children: bState.bookmarks.map((b) {
+                                return ListTile(
+                                  leading: const Icon(Icons.bookmark_outline),
+                                  title: Text('Surah ${b.surahNumber}'),
+                                  subtitle: Text(b.editionId),
+                                  trailing: IconButton(
+                                    icon: const Icon(Icons.delete_outline),
+                                    tooltip: 'Delete',
+                                    onPressed: () => context
+                                        .read<BookmarkBloc>()
+                                        .add(BookmarkDeleteRequested(b.id!)),
+                                  ),
+                                );
+                              }).toList(),
+                            );
+                          },
+                        ),
+                        // bottom breathing room
+                        const SizedBox(height: 32),
+                      ],
+                    ), // Column (content)
+                  ), // ConstrainedBox
+                ), // Align
+              ), // SliverToBoxAdapter
+            ], // slivers
+          ); // CustomScrollView
         },
       ),
     );

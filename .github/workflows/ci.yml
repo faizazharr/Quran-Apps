@@ -1,31 +1,72 @@
 name: CI
 
+# Triggers: every push/PR to main.
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
 
+# Cancel redundant in-progress runs for the same branch/PR so a rapid push
+# sequence doesn't queue up stale jobs.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   analyze-and-test:
+    name: Analyze · Test · Build
     runs-on: ubuntu-latest
+
     steps:
+      # ── Checkout ──────────────────────────────────────────────────────────
       - uses: actions/checkout@v4
 
+      # ── Flutter SDK ───────────────────────────────────────────────────────
+      # Use the latest stable 3.x release.
+      # Root cause of the previous failure: flutter-version '3.32.x' ships
+      # Dart 3.8.1 which does NOT satisfy the project constraint sdk: ^3.11.5.
+      # Dart ≥ 3.11.5 is bundled starting from Flutter ≈ 3.41.x (stable).
+      # Pinning to 3.x picks the latest stable 3.y.z, which is always ≥ 3.41.
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.32.x'
+          flutter-version: '3.x'
           channel: 'stable'
           cache: true
 
+      # ── Print exact SDK versions for debugging ────────────────────────────
+      - name: SDK versions
+        run: flutter --version
+
+      # ── Dependencies ──────────────────────────────────────────────────────
       - name: Install dependencies
         run: flutter pub get
 
+      # ── Format ────────────────────────────────────────────────────────────
+      # Fails if any tracked Dart file is not dart-formatted.
+      # Mirrors the pre-commit hook run locally.
+      - name: Check formatting
+        run: dart format --set-exit-if-changed lib test
+
+      # ── Analyze ───────────────────────────────────────────────────────────
+      # --fatal-infos: info-level diagnostics also cause a non-zero exit so
+      # CI matches the strict analysis_options.yaml used locally.
       - name: Analyze
         run: flutter analyze --fatal-infos
 
+      # ── Tests ─────────────────────────────────────────────────────────────
       - name: Test with coverage
         run: flutter test --coverage
 
-      - name: Build debug APK (smoke test)
-        run: flutter build apk --debug --dart-define=BASE_URL=https://placeholder.invalid
+      # ── Smoke builds ──────────────────────────────────────────────────────
+      # Verify the app compiles end-to-end; no artefacts are uploaded.
+      #
+      # Debug APK — fast, no signing needed.
+      - name: Build debug APK
+        run: flutter build apk --debug
+
+      # Release AAB (unsigned) — catches ProGuard / R8 shrinking issues early.
+      # key.properties is absent on CI so build.gradle.kts falls back to the
+      # debug signing config, which is fine for a smoke test.
+      - name: Build release AAB (smoke — unsigned)
+        run: flutter build appbundle --release

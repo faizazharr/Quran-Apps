@@ -34,4 +34,9 @@ abstract class IAudioPlayerService {
   Stream<Duration> get positionStream;
   Stream<Duration?> get durationStream;
   Stream<AudioPlaybackSnapshot> get playbackStream;
+
+  /// Emits whenever the player encounters an error (e.g. network failure,
+  /// codec error, 403 from CDN). Subscribe in BLoC to surface async errors
+  /// that are NOT thrown by [load] or [play] synchronously.
+  Stream<Object> get errorStream;
 }

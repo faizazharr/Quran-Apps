@@ -1,0 +1,62 @@
+#!/bin/sh
+# .githooks/pre-push
+#
+# Runs before every `git push`. Mirrors the GitHub Actions CI pipeline so
+# failures are caught locally before reaching the remote.
+#
+# Checks performed:
+#   1. dart format   — same check as pre-commit and CI
+#   2. flutter analyze --fatal-infos — same flags as CI
+#   3. flutter test  — full unit-test suite
+#
+# Skip the test step when you need a fast push (e.g. a WIP branch):
+#   SKIP_TESTS=1 git push
+#
+# Bypass everything in an emergency (not recommended):
+#   git push --no-verify
+
+set -e
+
+BOLD='\033[1m'
+YELLOW='\033[1;33m'
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+CYAN='\033[0;36m'
+NC='\033[0m'
+
+pass() { echo "${GREEN}${BOLD}[pre-push] ✓ $1${NC}"; }
+fail() {
+  echo ""
+  echo "${RED}${BOLD}[pre-push] ✗ $1${NC}"
+  echo "  $2"
+  exit 1
+}
+step() { echo "${YELLOW}${BOLD}[pre-push]${NC} ${CYAN}$1${NC}"; }
+
+echo ""
+echo "${YELLOW}${BOLD}━━━ pre-push checks ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+
+# ── 1. Formatting ─────────────────────────────────────────────────────────
+step "Checking formatting (lib/ test/)…"
+dart format --set-exit-if-changed lib test 2>&1 || \
+  fail "Formatting issues" "Run: dart format lib test  then re-stage and push."
+pass "Formatting"
+
+# ── 2. Static analysis ────────────────────────────────────────────────────
+step "Running flutter analyze --fatal-infos…"
+flutter analyze --fatal-infos 2>&1 || \
+  fail "Analysis failed" "Fix all warnings/errors before pushing."
+pass "Analysis"
+
+# ── 3. Tests ──────────────────────────────────────────────────────────────
+if [ "${SKIP_TESTS:-0}" = "1" ]; then
+  echo "${YELLOW}${BOLD}[pre-push]${NC} Skipping tests (SKIP_TESTS=1)"
+else
+  step "Running flutter test…"
+  flutter test 2>&1 || \
+    fail "Tests failed" "Fix the failing tests before pushing."
+  pass "Tests"
+fi
+
+echo "${YELLOW}${BOLD}━━━ all checks passed — pushing ━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo ""

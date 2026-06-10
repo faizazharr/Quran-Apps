@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../l10n/generated/app_localizations.dart';
 
 /// Gradient hero header with search field.
 ///
@@ -13,8 +14,12 @@ class SearchHeader extends StatelessWidget {
   final bool compact;
 
   /// Optional widget rendered immediately under the search field (e.g. the
-  /// reciter chooser chip).
+  /// "continue listening" chip).
   final Widget? trailing;
+
+  /// Optional widget placed at the far right of the logo/title row (e.g. the
+  /// settings icon button).
+  final Widget? actions;
 
   const SearchHeader({
     super.key,
@@ -23,6 +28,7 @@ class SearchHeader extends StatelessWidget {
     required this.onClear,
     this.compact = false,
     this.trailing,
+    this.actions,
   });
 
   @override
@@ -48,6 +54,7 @@ class SearchHeader extends StatelessWidget {
               onClear: onClear,
               scheme: scheme,
               trailing: trailing,
+              actions: actions,
             )
           : _StackedHero(
               controller: controller,
@@ -55,6 +62,7 @@ class SearchHeader extends StatelessWidget {
               onClear: onClear,
               scheme: scheme,
               trailing: trailing,
+              actions: actions,
             ),
     );
   }
@@ -66,6 +74,7 @@ class _StackedHero extends StatelessWidget {
   final VoidCallback onClear;
   final ColorScheme scheme;
   final Widget? trailing;
+  final Widget? actions;
 
   const _StackedHero({
     required this.controller,
@@ -73,6 +82,7 @@ class _StackedHero extends StatelessWidget {
     required this.onClear,
     required this.scheme,
     this.trailing,
+    this.actions,
   });
 
   @override
@@ -85,6 +95,7 @@ class _StackedHero extends StatelessWidget {
             _Logo(),
             const SizedBox(width: 12),
             const Expanded(child: _Title()),
+            ?actions,
           ],
         ),
         const SizedBox(height: 18),
@@ -109,6 +120,7 @@ class _CompactRow extends StatelessWidget {
   final VoidCallback onClear;
   final ColorScheme scheme;
   final Widget? trailing;
+  final Widget? actions;
 
   const _CompactRow({
     required this.controller,
@@ -116,6 +128,7 @@ class _CompactRow extends StatelessWidget {
     required this.onClear,
     required this.scheme,
     this.trailing,
+    this.actions,
   });
 
   @override
@@ -135,6 +148,7 @@ class _CompactRow extends StatelessWidget {
                 scheme: scheme,
               ),
             ),
+            ?actions,
           ],
         ),
         if (trailing != null) ...[
@@ -215,7 +229,7 @@ class _SearchField extends StatelessWidget {
         textInputAction: TextInputAction.search,
         onChanged: onChanged,
         decoration: InputDecoration(
-          hintText: 'Search surah or reciter…',
+          hintText: AppLocalizations.of(context).searchHint,
           prefixIcon: Icon(Icons.search, color: scheme.primary),
           suffixIcon: ValueListenableBuilder<TextEditingValue>(
             valueListenable: controller,

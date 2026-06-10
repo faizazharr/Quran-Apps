@@ -26,6 +26,17 @@
     </domain-config>
 
     <!--
+        just_audio_background proxies audio through a local HTTP server on
+        127.0.0.1 so ExoPlayer can consume it. Localhost is not a real network
+        hop and carries no security risk — this exemption is required for
+        playback to work on Android 9+.
+    -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">localhost</domain>
+        <domain includeSubdomains="false">127.0.0.1</domain>
+    </domain-config>
+
+    <!--
         Debug-only overrides: allow user-installed CAs (Charles, mitmproxy)
         so developers can inspect traffic. These rules are stripped from
         release builds by AGP.

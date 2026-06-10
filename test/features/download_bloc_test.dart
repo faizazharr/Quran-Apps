@@ -5,7 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:quran_apps/data/models/download_record.dart' as record_lib;
 import 'package:quran_apps/data/services/download_service.dart';
-import 'package:quran_apps/features/download/bloc/download_bloc.dart' as bloc_lib;
+import 'package:quran_apps/features/download/bloc/download_bloc.dart'
+    as bloc_lib;
 
 class MockDownloadService extends Mock implements IDownloadService {}
 
@@ -29,8 +30,9 @@ void main() {
     service = MockDownloadService();
     streamController =
         StreamController<List<record_lib.DownloadRecord>>.broadcast();
-    when(() => service.downloadsStream)
-        .thenAnswer((_) => streamController.stream);
+    when(
+      () => service.downloadsStream,
+    ).thenAnswer((_) => streamController.stream);
     when(() => service.getAll()).thenAnswer((_) async => []);
     when(
       () => service.enqueue(
@@ -80,8 +82,9 @@ void main() {
       'reflects incoming stream events in state',
       build: () => bloc_lib.DownloadBloc(service),
       act: (bloc) {
-        streamController
-            .add([_record(status: record_lib.DownloadStatus.downloading)]);
+        streamController.add([
+          _record(status: record_lib.DownloadStatus.downloading),
+        ]);
       },
       expect: () => [
         isA<bloc_lib.DownloadState>().having(

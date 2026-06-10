@@ -8,6 +8,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'core/di/service_locator.dart';
 import 'core/theme/app_theme.dart';
 import 'data/models/app_settings.dart';
+import 'features/activity/bloc/activity_bloc.dart';
 import 'features/ayah/bloc/ayah_bloc.dart';
 import 'features/bookmark/bloc/bookmark_bloc.dart';
 import 'features/download/bloc/download_bloc.dart';
@@ -29,31 +30,25 @@ class QuranPlayerApp extends StatelessWidget {
     return MultiBlocProvider(
       providers: [
         BlocProvider(
-          create: (_) =>
-              sl<SettingsBloc>()..add(const SettingsLoadRequested()),
+          create: (_) => sl<SettingsBloc>()..add(const SettingsLoadRequested()),
         ),
         BlocProvider(
           create: (_) => sl<SearchBloc>()..add(const SearchLoadRequested()),
         ),
+        BlocProvider(create: (_) => sl<PlayerBloc>()),
         BlocProvider(
-          create: (_) => sl<PlayerBloc>(),
+          create: (_) => sl<BookmarkBloc>()..add(const BookmarkLoadRequested()),
         ),
+        BlocProvider(create: (_) => sl<AyahBloc>()),
         BlocProvider(
-          create: (_) =>
-              sl<BookmarkBloc>()..add(const BookmarkLoadRequested()),
-        ),
-        BlocProvider(
-          create: (_) => sl<AyahBloc>(),
-        ),
-        BlocProvider(
-          create: (_) =>
-              sl<DownloadBloc>()..add(const DownloadLoadRequested()),
+          create: (_) => sl<DownloadBloc>()..add(const DownloadLoadRequested()),
         ),
         BlocProvider(
           create: (_) => sl<QuoteBloc>()..add(const QuoteLoadRequested()),
         ),
+        BlocProvider(create: (_) => sl<SleepTimerBloc>()),
         BlocProvider(
-          create: (_) => sl<SleepTimerBloc>(),
+          create: (_) => sl<ActivityBloc>()..add(const ActivityLoadRequested()),
         ),
       ],
       child: BlocBuilder<SettingsBloc, SettingsState>(
@@ -124,6 +119,26 @@ class QuranPlayerApp extends StatelessWidget {
                       );
                     }
                   },
+                ),
+                // Audio started playing → record "last listened" activity.
+                BlocListener<PlayerBloc, PlayerState>(
+                  listenWhen: (prev, curr) =>
+                      prev.status != PlaybackStatus.playing &&
+                      curr.status == PlaybackStatus.playing,
+                  listener: (context, _) => context.read<ActivityBloc>().add(
+                    ActivityListenedRecorded(DateTime.now()),
+                  ),
+                ),
+                // Translation changed: refresh Quote of the Day so the
+                // translation text matches the user's new language preference.
+                BlocListener<SettingsBloc, SettingsState>(
+                  listenWhen: (prev, curr) =>
+                      curr.status == SettingsStatus.ready &&
+                      prev.settings.translationEditionId !=
+                          curr.settings.translationEditionId,
+                  listener: (context, _) => context.read<QuoteBloc>().add(
+                    const QuoteRefreshRequested(),
+                  ),
                 ),
               ],
               child: const _ConnectivityBanner(child: SearchScreen()),

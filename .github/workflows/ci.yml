@@ -2,7 +2,7 @@ name: CI
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Runs on:
-#   • push to dev-release, staging, main   — gives immediate feedback
+#   • push to main only  — CD handles dev-release/staging (has own validate job)
 #   • PRs targeting dev-release, staging, main — gate before merge
 #
 # Job graph
@@ -23,7 +23,7 @@ name: CI
 # ─────────────────────────────────────────────────────────────────────────────
 on:
   push:
-    branches: [dev-release, staging, main]
+    branches: [main]
   pull_request:
     branches: [dev-release, staging, main]
 

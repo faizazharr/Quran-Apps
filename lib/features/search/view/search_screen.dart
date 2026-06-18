@@ -303,7 +303,6 @@ class _ResultsList extends StatelessWidget {
           // KeepAlive widgets, so these would be wasted overhead.
           addRepaintBoundaries: false,
           addAutomaticKeepAlives: false,
-          cacheExtent: 400,
           itemBuilder: (context, index) {
             if (showQuote && index == 0) {
               return const LastActivityCard();

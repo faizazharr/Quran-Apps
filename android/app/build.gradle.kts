@@ -47,6 +47,9 @@ android {
                 keyPassword = keystoreProperties["keyPassword"] as String
                 storeFile = file(keystoreProperties["storeFile"] as String)
                 storePassword = keystoreProperties["storePassword"] as String
+                // Keystore is PKCS12; AGP infers JKS from the .jks extension
+                // which causes "Tag number over 30 is not supported" on signing.
+                storeType = "PKCS12"
             }
         }
     }

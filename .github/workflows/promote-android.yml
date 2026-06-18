@@ -1,42 +1,40 @@
 name: Promote — Android Play Store
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Manual workflow to promote a release between Play Store tracks without
-# rebuilding — the AAB already uploaded by cd-android.yml is reused.
+# Manual override untuk promosi track tanpa rebuild.
 #
-# Typical promotion ladder:
-#   internal → alpha  (closed-group testers)
-#   alpha    → beta   (open testing)
-#   beta     → production
+# Dengan alur branch-based, promosi biasanya terjadi otomatis via merge:
+#   dev-release → staging  →  alpha (closed testing)
+#   staging     → main     →  production
 #
-# Required repository secrets: same GOOGLE_PLAY_JSON used by cd-android.yml
+# Workflow ini dipakai untuk kasus khusus:
+#   • Mempercepat rollout production (naik dari 10% ke 50% / 100%)
+#   • Rollback ke track sebelumnya jika ada masalah
+#   • Bypass branch flow untuk hotfix darurat
+#
+# Required secrets: GOOGLE_PLAY_JSON (sama dengan cd-android.yml)
 # ─────────────────────────────────────────────────────────────────────────────
 on:
   workflow_dispatch:
     inputs:
       from_track:
-        description: 'Promote FROM track'
+        description: 'Dari track mana'
         required: true
         default: internal
         type: choice
         options: [internal, alpha, beta]
 
       to_track:
-        description: 'Promote TO track'
+        description: 'Ke track mana'
         required: true
         default: alpha
         type: choice
         options: [alpha, beta, production]
 
       rollout_percentage:
-        description: 'Staged rollout % for production (1–100, ignored for other tracks)'
+        description: 'Rollout % untuk production (1–100, abaikan untuk track lain)'
         required: false
-        default: '10'
-
-      version_code:
-        description: 'versionCode to promote (leave blank for latest in from_track)'
-        required: false
-        default: ''
+        default: '100'
 
 env:
   PACKAGE_NAME: com.labs.quran
@@ -49,41 +47,41 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # ── Resolve rollout fraction ─────────────────────────────────────────────
       - name: Compute rollout fraction
         id: rollout
         run: |
           if [[ "${{ inputs.to_track }}" == "production" ]]; then
             PCT="${{ inputs.rollout_percentage }}"
-            # clamp to 1–100
             PCT=$(( PCT < 1   ? 1   : PCT ))
             PCT=$(( PCT > 100 ? 100 : PCT ))
             echo "fraction=$(echo "scale=2; $PCT/100" | bc)" >> "$GITHUB_OUTPUT"
+            echo "status=inProgress" >> "$GITHUB_OUTPUT"
           else
-            echo "fraction=1.0" >> "$GITHUB_OUTPUT"
+            echo "fraction=1.0"   >> "$GITHUB_OUTPUT"
+            echo "status=completed" >> "$GITHUB_OUTPUT"
           fi
 
-      # ── Promote via Play Developer API ───────────────────────────────────────
-      - name: Promote release
+      - name: Promote release on Play Store
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_JSON }}
           packageName: ${{ env.PACKAGE_NAME }}
           track: ${{ inputs.to_track }}
           fromTrack: ${{ inputs.from_track }}
-          status: ${{ inputs.to_track == 'production' && 'inProgress' || 'completed' }}
+          status: ${{ steps.rollout.outputs.status }}
           userFraction: ${{ steps.rollout.outputs.fraction }}
 
-      # ── Summary ──────────────────────────────────────────────────────────────
-      - name: Print summary
+      - name: Job summary
         run: |
-          echo "## Promotion complete ✅" >> "$GITHUB_STEP_SUMMARY"
+          echo "## Promosi Selesai ✅" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "| | |" >> "$GITHUB_STEP_SUMMARY"
           echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
-          echo "| **Package** | \`${{ env.PACKAGE_NAME }}\` |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| **From** | \`${{ inputs.from_track }}\` |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| **To** | \`${{ inputs.to_track }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| **Dari** | \`${{ inputs.from_track }}\` |" \
+            >> "$GITHUB_STEP_SUMMARY"
+          echo "| **Ke** | \`${{ inputs.to_track }}\` |" \
+            >> "$GITHUB_STEP_SUMMARY"
           if [[ "${{ inputs.to_track }}" == "production" ]]; then
-            echo "| **Rollout** | ${{ inputs.rollout_percentage }}% |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| **Rollout** | ${{ inputs.rollout_percentage }}% |" \
+              >> "$GITHUB_STEP_SUMMARY"
           fi

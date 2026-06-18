@@ -21,8 +21,8 @@ class QuoteCard extends StatelessWidget {
         if (state.status == QuoteStatus.loading) {
           return const Card(
             margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: SizedBox(
-              height: 160,
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 32),
               child: Center(child: CircularProgressIndicator()),
             ),
           );
@@ -31,16 +31,13 @@ class QuoteCard extends StatelessWidget {
         if (state.status == QuoteStatus.error) {
           return Card(
             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: SizedBox(
-              height: 120,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
               child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Text(
-                    state.errorMessage ?? 'Failed to load quote of the day',
-                    style: TextStyle(color: scheme.error),
-                    textAlign: TextAlign.center,
-                  ),
+                child: Text(
+                  state.errorMessage ?? 'Failed to load quote of the day',
+                  style: TextStyle(color: scheme.error),
+                  textAlign: TextAlign.center,
                 ),
               ),
             ),

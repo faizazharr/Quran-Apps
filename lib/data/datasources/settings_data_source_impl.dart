@@ -12,6 +12,7 @@ class _K {
   static const arabicEditionId = 'arabic_edition_id';
   static const translationEditionId = 'translation_edition_id';
   static const showTranslation = 'show_translation';
+  static const arabicFontSize = 'arabic_font_size';
 }
 
 class SettingsDataSourceImpl implements ISettingsDataSource {
@@ -40,6 +41,9 @@ class SettingsDataSourceImpl implements ISettingsDataSource {
             map[_K.translationEditionId] ??
             AppSettings.defaults.translationEditionId,
         showTranslation: map[_K.showTranslation] == '1',
+        arabicFontSize:
+            double.tryParse(map[_K.arabicFontSize] ?? '') ??
+            AppSettings.defaults.arabicFontSize,
       );
     } catch (e) {
       throw LocalException('Failed to load settings: $e');
@@ -62,6 +66,7 @@ class SettingsDataSourceImpl implements ISettingsDataSource {
       put(_K.arabicEditionId, settings.arabicEditionId);
       put(_K.translationEditionId, settings.translationEditionId);
       put(_K.showTranslation, settings.showTranslation ? '1' : '0');
+      put(_K.arabicFontSize, settings.arabicFontSize.toString());
       await batch.commit(noResult: true);
     } catch (e) {
       throw LocalException('Failed to save settings: $e');

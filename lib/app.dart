@@ -6,19 +6,24 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'core/di/service_locator.dart';
+import 'core/responsive/responsive.dart';
 import 'core/theme/app_theme.dart';
 import 'data/models/app_settings.dart';
 import 'features/activity/bloc/activity_bloc.dart';
 import 'features/ayah/bloc/ayah_bloc.dart';
 import 'features/bookmark/bloc/bookmark_bloc.dart';
+import 'features/bookmark/view/bookmarks_screen.dart';
 import 'features/download/bloc/download_bloc.dart';
 import 'features/player/bloc/player_bloc.dart';
+import 'features/player/view/player_panel.dart';
 import 'features/quote/bloc/quote_bloc.dart';
 import 'features/search/bloc/search_bloc.dart';
 import 'features/search/view/search_screen.dart';
 import 'features/settings/bloc/settings_bloc.dart';
+import 'features/settings/view/settings_screen.dart';
 import 'features/sleep_timer/bloc/sleep_timer_bloc.dart';
 import 'l10n/generated/app_localizations.dart';
+import 'shared/widgets/now_playing_pane.dart';
 
 /// Root widget. Pulls dependencies from the [GetIt] service locator
 /// (configured in `main.dart`) and creates the feature BLoCs.
@@ -141,7 +146,7 @@ class QuranPlayerApp extends StatelessWidget {
                   ),
                 ),
               ],
-              child: const _ConnectivityBanner(child: SearchScreen()),
+              child: const _ConnectivityBanner(child: _AppShell()),
             ),
           );
         },
@@ -149,6 +154,84 @@ class QuranPlayerApp extends StatelessWidget {
     );
   }
 }
+
+// ─── App shell with bottom navigation ────────────────────────────────────────
+
+/// Root shell: BottomNavigationBar (Home | Bookmarks | Settings) with a
+/// persistent PlayerPanel above the nav bar when a track is loaded.
+class _AppShell extends StatefulWidget {
+  const _AppShell();
+
+  @override
+  State<_AppShell> createState() => _AppShellState();
+}
+
+class _AppShellState extends State<_AppShell> {
+  int _currentIndex = 0;
+
+  static const _tabs = [SearchScreen(), BookmarksScreen(), SettingsScreen()];
+
+  @override
+  Widget build(BuildContext context) {
+    final r = ResponsiveInfo.of(context);
+
+    final navBar = NavigationBar(
+      selectedIndex: _currentIndex,
+      onDestinationSelected: (i) => setState(() => _currentIndex = i),
+      destinations: const [
+        NavigationDestination(
+          icon: Icon(Icons.home_outlined),
+          selectedIcon: Icon(Icons.home_rounded),
+          label: 'Home',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.bookmark_outline_rounded),
+          selectedIcon: Icon(Icons.bookmark_rounded),
+          label: 'Bookmarks',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.settings_outlined),
+          selectedIcon: Icon(Icons.settings_rounded),
+          label: 'Settings',
+        ),
+      ],
+    );
+
+    final body = IndexedStack(index: _currentIndex, children: _tabs);
+
+    if (r.useTwoPane) {
+      // Tablet / landscape: persistent right player column across all tabs.
+      // No bottom sheet — it would overlap content and duplicate the panel.
+      final rightWidth = r.isExpanded ? 360.0 : 300.0;
+      return Scaffold(
+        bottomNavigationBar: navBar,
+        body: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(child: body),
+            VerticalDivider(
+              width: 1,
+              thickness: 1,
+              color: Theme.of(
+                context,
+              ).colorScheme.outlineVariant.withValues(alpha: 0.4),
+            ),
+            SizedBox(width: rightWidth, child: const NowPlayingPane()),
+          ],
+        ),
+      );
+    }
+
+    // Phone / compact: slide-up player panel above the nav bar.
+    return Scaffold(
+      bottomSheet: const PlayerPanel(),
+      bottomNavigationBar: navBar,
+      body: body,
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 /// Listens to network connectivity changes and shows a persistent banner at
 /// the top of the scaffold when the device goes offline, and a brief "back
@@ -169,6 +252,9 @@ class _ConnectivityBannerState extends State<_ConnectivityBanner> {
   void initState() {
     super.initState();
     _sub = Connectivity().onConnectivityChanged.listen(_onChanged);
+    // Check current connectivity at startup so the banner shows immediately
+    // if the device is already offline when the app launches.
+    unawaited(Connectivity().checkConnectivity().then(_onChanged));
   }
 
   @override

@@ -12,20 +12,16 @@ import '../../../shared/widgets/empty_state_view.dart';
 import '../../activity/widgets/last_activity_card.dart';
 import '../../bookmark/bloc/bookmark_bloc.dart';
 import '../../player/bloc/player_bloc.dart';
-import '../../player/view/player_panel.dart';
 import '../../quote/view/quote_card.dart';
-import '../../settings/view/settings_screen.dart';
-import '../../sleep_timer/bloc/sleep_timer_bloc.dart';
 import '../../surah/view/surah_detail_page.dart';
 import '../bloc/search_bloc.dart';
 import '../widgets/search_header.dart';
 import '../widgets/surah_tile.dart';
 import '../widgets/track_tile_shimmer.dart';
 
-/// Main screen — adapts between:
-///   • compact / portrait : header + list + bottom player panel
-///   • two-pane (landscape phone, tablet, desktop): list on the left,
-///     player on the right.
+/// Home screen: surah list with search/filter. The two-pane layout (list left,
+/// player right) is handled by the app shell on tablet — this screen always
+/// renders single-column.
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
 
@@ -53,49 +49,23 @@ class _SearchScreenState extends State<SearchScreen> {
 
   Future<void> _refresh() async {
     context.read<SearchBloc>().add(const SearchRefreshRequested());
-    await Future<void>.delayed(const Duration(milliseconds: 250));
+    // Wait until the bloc leaves the refreshing state before dismissing the
+    // pull-to-refresh indicator so it doesn't snap away immediately.
+    await context.read<SearchBloc>().stream.firstWhere(
+      (s) => s.status != SearchStatus.refreshing,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final r = ResponsiveInfo.of(context);
     return Scaffold(
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final r = ResponsiveInfo.of(context);
-
-          if (r.useTwoPane) {
-            return Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(
-                  flex: 3,
-                  child: _ListPane(
-                    controller: _controller,
-                    onChanged: _onChanged,
-                    onClear: _onClear,
-                    onRefresh: _refresh,
-                    compactHeader: r.isShortHeight,
-                  ),
-                ),
-                Container(
-                  width: 1,
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.outlineVariant.withValues(alpha: 0.4),
-                ),
-                const Expanded(flex: 2, child: _PlayerPane()),
-              ],
-            );
-          }
-
-          return _ListPane(
-            controller: _controller,
-            onChanged: _onChanged,
-            onClear: _onClear,
-            onRefresh: _refresh,
-            compactHeader: r.isShortHeight,
-          );
-        },
+      body: _ListPane(
+        controller: _controller,
+        onChanged: _onChanged,
+        onClear: _onClear,
+        onRefresh: _refresh,
+        compactHeader: r.isShortHeight,
       ),
     );
   }
@@ -182,7 +152,6 @@ class _ListPaneState extends State<_ListPane> {
             onClear: widget.onClear,
             compact: widget.compactHeader,
             trailing: _ContinueListeningChip(l10n: l10n),
-            actions: _SettingsButton(l10n: l10n),
           ),
           Expanded(
             child: BlocBuilder<SearchBloc, SearchState>(
@@ -268,31 +237,6 @@ class _ContinueListeningChip extends StatelessWidget {
   }
 }
 
-/// Settings icon placed at the top-right of the SearchHeader logo row.
-class _SettingsButton extends StatelessWidget {
-  final AppLocalizations l10n;
-  const _SettingsButton({required this.l10n});
-
-  @override
-  Widget build(BuildContext context) {
-    return IconButton(
-      icon: const Icon(Icons.settings_outlined, color: Colors.white),
-      tooltip: l10n.settings,
-      onPressed: () => Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => MultiBlocProvider(
-            providers: [
-              BlocProvider.value(value: context.read<BookmarkBloc>()),
-              BlocProvider.value(value: context.read<SleepTimerBloc>()),
-            ],
-            child: const SettingsScreen(),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _ResultsList extends StatelessWidget {
   final SearchState state;
   final ScrollController scrollController;
@@ -312,40 +256,24 @@ class _ResultsList extends StatelessWidget {
         }
         break;
       case SearchStatus.failure:
-        return ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          children: [
-            SizedBox(
-              height: MediaQuery.of(context).size.height * 0.55,
-              child: EmptyStateView(
-                icon: Icons.cloud_off_rounded,
-                title: 'Something went wrong',
-                subtitle: state.errorMessage,
-                actionLabel: 'Try again',
-                onAction: () => context.read<SearchBloc>().add(
-                  const SearchRefreshRequested(),
-                ),
-              ),
-            ),
-          ],
+        return EmptyStateView(
+          icon: Icons.cloud_off_rounded,
+          title: 'Something went wrong',
+          subtitle: state.errorMessage,
+          actionLabel: 'Try again',
+          onAction: () => context.read<SearchBloc>().add(
+            const SearchRefreshRequested(),
+          ),
         );
       case SearchStatus.refreshing:
       case SearchStatus.success:
         if (state.surahs.isEmpty) {
-          return ListView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            children: [
-              SizedBox(
-                height: MediaQuery.of(context).size.height * 0.55,
-                child: EmptyStateView(
-                  icon: Icons.search_off_rounded,
-                  title: state.query.isEmpty
-                      ? 'No surahs available'
-                      : 'No results for "${state.query}"',
-                  subtitle: 'Try a different surah name or number.',
-                ),
-              ),
-            ],
+          return EmptyStateView(
+            icon: Icons.search_off_rounded,
+            title: state.query.isEmpty
+                ? 'No surahs available'
+                : 'No results for "${state.query}"',
+            subtitle: 'Try a different surah name or number.',
           );
         }
         break;
@@ -457,38 +385,6 @@ class _PaginationFooter extends StatelessWidget {
                 style: TextStyle(color: color, fontSize: 12),
               ),
       ),
-    );
-  }
-}
-
-/// Right-hand pane used in the two-pane layout. Shows the player when a
-/// track is selected, or a friendly hint otherwise.
-class _PlayerPane extends StatelessWidget {
-  const _PlayerPane();
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Expanded(
-          child: BlocSelector<PlayerBloc, PlayerState, bool>(
-            selector: (s) => s.hasTrack,
-            builder: (context, hasTrack) => AnimatedSwitcher(
-              duration: const Duration(milliseconds: 300),
-              child: hasTrack
-                  ? const SizedBox.shrink(key: ValueKey('empty'))
-                  : const EmptyStateView(
-                      key: ValueKey('hint'),
-                      icon: Icons.headphones_rounded,
-                      title: 'Pick a surah to play',
-                      subtitle:
-                          'Select any item from the list to start listening.',
-                    ),
-            ),
-          ),
-        ),
-        const PlayerPanel(isBottomBar: false),
-      ],
     );
   }
 }

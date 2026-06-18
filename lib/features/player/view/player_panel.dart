@@ -10,6 +10,8 @@ import '../../../shared/widgets/player_seek_bar.dart';
 import '../../ayah/view/ayah_view.dart';
 import '../../bookmark/bloc/bookmark_bloc.dart';
 import '../../search/bloc/search_bloc.dart';
+import '../../settings/widgets/sleep_timer_dialog.dart';
+import '../../sleep_timer/bloc/sleep_timer_bloc.dart';
 import '../bloc/player_bloc.dart';
 
 /// Modern bottom player panel with animated entrance + gradient.
@@ -78,14 +80,21 @@ class _PanelContent extends StatelessWidget {
       child = SafeArea(top: false, child: child);
     }
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: AppColors.brandGradient,
-        borderRadius: isBottomBar
-            ? const BorderRadius.vertical(top: Radius.circular(24))
-            : BorderRadius.circular(20),
+    return BlocListener<PlayerBloc, PlayerState>(
+      listenWhen: (prev, curr) =>
+          prev.status != PlaybackStatus.completed &&
+          curr.status == PlaybackStatus.completed &&
+          curr.repeatMode == PlayerRepeatMode.all,
+      listener: (context, _) => _jumpToAdjacent(context, 1),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: AppColors.brandGradient,
+          borderRadius: isBottomBar
+              ? const BorderRadius.vertical(top: Radius.circular(24))
+              : BorderRadius.circular(20),
+        ),
+        child: child,
       ),
-      child: child,
     );
   }
 }
@@ -213,6 +222,28 @@ class _Header extends StatelessWidget {
                     );
                   },
                 ),
+                // Sleep timer
+                BlocSelector<SleepTimerBloc, SleepTimerState, bool>(
+                  selector: (s) => s.isActive,
+                  builder: (context, isActive) => IconButton(
+                    tooltip: isActive ? 'Sleep timer active' : 'Sleep timer',
+                    onPressed: () => showDialog<void>(
+                      context: context,
+                      builder: (_) => MultiBlocProvider(
+                        providers: [
+                          BlocProvider.value(
+                            value: context.read<SleepTimerBloc>(),
+                          ),
+                        ],
+                        child: const SleepTimerDialog(),
+                      ),
+                    ),
+                    icon: Icon(
+                      isActive ? Icons.bedtime_rounded : Icons.bedtime_outlined,
+                      color: isActive ? AppColors.accent : Colors.white,
+                    ),
+                  ),
+                ),
                 IconButton(
                   tooltip: 'Close',
                   onPressed: () => context.read<PlayerBloc>().add(
@@ -229,20 +260,32 @@ class _Header extends StatelessWidget {
                       width: double.infinity,
                       margin: const EdgeInsets.only(top: 8),
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
+                        horizontal: 12,
+                        vertical: 8,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.red.withValues(alpha: 0.25),
-                        borderRadius: BorderRadius.circular(8),
+                        color: Colors.red.withValues(alpha: 0.55),
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Text(
-                        vm.errorMessage!,
-                        style: const TextStyle(
-                          color: Color(0xFFFFD2D2),
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                        ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.error_outline_rounded,
+                            color: Colors.white,
+                            size: 16,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              vm.errorMessage!,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     )
                   : const SizedBox.shrink(),
@@ -284,6 +327,7 @@ class _Controls extends StatelessWidget {
         isLoading: s.isLoading,
         isCompleted: s.status == PlaybackStatus.completed,
         speed: s.speed,
+        repeatMode: s.repeatMode,
       ),
       builder: (context, vm) {
         final bloc = context.read<PlayerBloc>();
@@ -336,6 +380,11 @@ class _Controls extends StatelessWidget {
               icon: Icons.skip_next_rounded,
               onTap: () => _jumpToAdjacent(context, 1),
             ),
+            // Repeat toggle
+            _RepeatButton(
+              repeatMode: vm.repeatMode,
+              onTap: () => bloc.add(const PlayerRepeatModeChanged()),
+            ),
             _SpeedChip(
               speed: vm.speed,
               speeds: _speeds,
@@ -353,18 +402,26 @@ class _ControlsVM extends Equatable {
   final bool isLoading;
   final bool isCompleted;
   final double speed;
+  final PlayerRepeatMode repeatMode;
   const _ControlsVM({
     required this.isPlaying,
     required this.isLoading,
     required this.isCompleted,
     required this.speed,
+    required this.repeatMode,
   });
   @override
-  List<Object?> get props => [isPlaying, isLoading, isCompleted, speed];
+  List<Object?> get props => [
+    isPlaying,
+    isLoading,
+    isCompleted,
+    speed,
+    repeatMode,
+  ];
 }
 
 /// Navigates to the previous (delta = -1) or next (delta = +1) surah,
-/// keeping the same reciter.
+/// keeping the same reciter. Shows a snackbar when already at the boundary.
 void _jumpToAdjacent(BuildContext context, int delta) {
   final playerBloc = context.read<PlayerBloc>();
   final currentTrack = playerBloc.state.track;
@@ -379,7 +436,20 @@ void _jumpToAdjacent(BuildContext context, int delta) {
   if (currentIndex == -1) return;
 
   final nextIndex = currentIndex + delta;
-  if (nextIndex < 0 || nextIndex >= surahs.length) return;
+  if (nextIndex < 0 || nextIndex >= surahs.length) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          nextIndex < 0
+              ? 'Already at the first surah'
+              : 'Already at the last surah',
+        ),
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+    return;
+  }
 
   final nextSurah = surahs[nextIndex];
   playerBloc.add(
@@ -456,6 +526,46 @@ class _PrimaryButton extends StatelessWidget {
   }
 }
 
+class _RepeatButton extends StatelessWidget {
+  final PlayerRepeatMode repeatMode;
+  final VoidCallback onTap;
+  const _RepeatButton({required this.repeatMode, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final isActive = repeatMode != PlayerRepeatMode.off;
+    final (icon, tooltip) = switch (repeatMode) {
+      PlayerRepeatMode.off => (Icons.repeat_rounded, 'Repeat: Off'),
+      PlayerRepeatMode.one => (Icons.repeat_one_rounded, 'Repeat: On'),
+      PlayerRepeatMode.all => (Icons.playlist_play_rounded, 'Auto-play next'),
+    };
+    return Tooltip(
+      message: tooltip,
+      child: SizedBox(
+        width: 44,
+        height: 44,
+        child: Material(
+          color: isActive
+              ? Colors.white.withValues(alpha: 0.28)
+              : Colors.white.withValues(alpha: 0.16),
+          shape: const CircleBorder(),
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: onTap,
+            child: Center(
+              child: Icon(
+                icon,
+                color: isActive ? AppColors.accent : Colors.white,
+                size: 20,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Compact pill that cycles through playback speeds on tap.
 /// Long-press shows a popup menu for direct selection.
 class _SpeedChip extends StatelessWidget {
@@ -474,67 +584,70 @@ class _SpeedChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        // Cycle to the next speed in the list.
-        final idx = speeds.indexOf(speed);
-        final next = speeds[(idx + 1) % speeds.length];
-        onSelected(next);
-      },
-      onLongPress: () async {
-        final box = context.findRenderObject()! as RenderBox;
-        final offset = box.localToGlobal(Offset.zero);
-        final screen = MediaQuery.sizeOf(context);
-        final menuHeight = speeds.length * 48.0;
-        final top = (offset.dy - menuHeight).clamp(
-          8.0,
-          screen.height - menuHeight - 8.0,
-        );
+    return Tooltip(
+      message: 'Playback speed — hold to pick',
+      child: GestureDetector(
+        onTap: () {
+          // Cycle to the next speed in the list.
+          final idx = speeds.indexOf(speed);
+          final next = speeds[(idx + 1) % speeds.length];
+          onSelected(next);
+        },
+        onLongPress: () async {
+          final box = context.findRenderObject()! as RenderBox;
+          final offset = box.localToGlobal(Offset.zero);
+          final screen = MediaQuery.sizeOf(context);
+          final menuHeight = speeds.length * 48.0;
+          final top = (offset.dy - menuHeight).clamp(
+            8.0,
+            screen.height - menuHeight - 8.0,
+          );
 
-        final selected = await showMenu<double>(
-          context: context,
-          position: RelativeRect.fromLTRB(
-            offset.dx,
-            top,
-            offset.dx + box.size.width,
-            top + menuHeight,
-          ),
-          items: speeds
-              .map(
-                (s) => PopupMenuItem<double>(
-                  value: s,
-                  child: Row(
-                    children: [
-                      if (s == speed)
-                        const Icon(Icons.check, size: 16)
-                      else
-                        const SizedBox(width: 16),
-                      const SizedBox(width: 8),
-                      Text(_label(s)),
-                    ],
+          final selected = await showMenu<double>(
+            context: context,
+            position: RelativeRect.fromLTRB(
+              offset.dx,
+              top,
+              offset.dx + box.size.width,
+              top + menuHeight,
+            ),
+            items: speeds
+                .map(
+                  (s) => PopupMenuItem<double>(
+                    value: s,
+                    child: Row(
+                      children: [
+                        if (s == speed)
+                          const Icon(Icons.check, size: 16)
+                        else
+                          const SizedBox(width: 16),
+                        const SizedBox(width: 8),
+                        Text(_label(s)),
+                      ],
+                    ),
                   ),
-                ),
-              )
-              .toList(),
-        );
-        if (selected != null) onSelected(selected);
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOut,
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: speed != 1.0
-              ? Colors.white.withValues(alpha: 0.30)
-              : Colors.white.withValues(alpha: 0.16),
-          borderRadius: BorderRadius.circular(999),
-        ),
-        child: Text(
-          _label(speed),
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: speed != 1.0 ? FontWeight.w700 : FontWeight.w500,
-            fontSize: 12,
+                )
+                .toList(),
+          );
+          if (selected != null) onSelected(selected);
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: speed != 1.0
+                ? Colors.white.withValues(alpha: 0.30)
+                : Colors.white.withValues(alpha: 0.16),
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Text(
+            _label(speed),
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: speed != 1.0 ? FontWeight.w700 : FontWeight.w500,
+              fontSize: 12,
+            ),
           ),
         ),
       ),

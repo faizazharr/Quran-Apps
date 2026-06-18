@@ -3,11 +3,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/responsive/responsive.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/duration_formatter.dart';
 import '../../../data/models/app_settings.dart';
 import '../../../data/models/translation_edition.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../bookmark/bloc/bookmark_bloc.dart';
 import '../../player/bloc/player_bloc.dart';
+import '../../search/bloc/search_bloc.dart';
 import '../bloc/settings_bloc.dart';
 import '../widgets/sleep_timer_dialog.dart';
 
@@ -25,8 +27,7 @@ class SettingsScreen extends StatelessWidget {
         builder: (context, state) {
           final settings = state.settings;
 
-          // On expanded screens, centre the content at contentMaxWidth.
-          final maxWidth = r.isExpanded ? Breakpoints.contentMaxWidth : null;
+          final maxWidth = !r.isCompact ? Breakpoints.contentMaxWidth : null;
 
           return CustomScrollView(
             slivers: [
@@ -46,9 +47,18 @@ class SettingsScreen extends StatelessWidget {
                 flexibleSpace: Container(
                   decoration: const BoxDecoration(
                     gradient: AppColors.brandGradient,
+                    // Match the rounded bottom corners of all other gradient headers.
+                    borderRadius: BorderRadius.vertical(
+                      bottom: Radius.circular(28),
+                    ),
                   ),
                 ),
                 backgroundColor: Colors.transparent,
+                // Reserve space so the rounded corners aren't clipped.
+                bottom: const PreferredSize(
+                  preferredSize: Size.fromHeight(12),
+                  child: SizedBox(),
+                ),
               ),
               SliverToBoxAdapter(
                 child: Align(
@@ -62,66 +72,145 @@ class SettingsScreen extends StatelessWidget {
                       children: [
                         // --- Theme ---
                         _SectionHeader(l10n.darkMode),
-                        RadioGroup<AppThemeMode>(
-                          groupValue: settings.themeMode,
-                          onChanged: (v) {
-                            if (v != null) {
-                              context.read<SettingsBloc>().add(
-                                SettingsThemeChanged(v),
-                              );
-                            }
-                          },
-                          child: Column(
-                            children: [
-                              RadioListTile<AppThemeMode>(
-                                title: Text(l10n.themeSystem),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 4,
+                          ),
+                          child: SegmentedButton<AppThemeMode>(
+                            segments: [
+                              ButtonSegment(
                                 value: AppThemeMode.system,
+                                label: Text(l10n.themeSystem),
+                                icon: const Icon(Icons.brightness_auto_rounded),
                               ),
-                              RadioListTile<AppThemeMode>(
-                                title: Text(l10n.themeLight),
+                              ButtonSegment(
                                 value: AppThemeMode.light,
+                                label: Text(l10n.themeLight),
+                                icon: const Icon(Icons.light_mode_rounded),
                               ),
-                              RadioListTile<AppThemeMode>(
-                                title: Text(l10n.themeDark),
+                              ButtonSegment(
                                 value: AppThemeMode.dark,
+                                label: Text(l10n.themeDark),
+                                icon: const Icon(Icons.dark_mode_rounded),
                               ),
                             ],
+                            selected: {settings.themeMode},
+                            onSelectionChanged: (v) {
+                              if (v.isNotEmpty) {
+                                context.read<SettingsBloc>().add(
+                                  SettingsThemeChanged(v.first),
+                                );
+                              }
+                            },
+                            style: const ButtonStyle(
+                              iconSize: WidgetStatePropertyAll(16),
+                              textStyle: WidgetStatePropertyAll(
+                                TextStyle(fontSize: 12),
+                              ),
+                            ),
                           ),
                         ),
-                        const Divider(),
+                        const Divider(height: 24),
 
                         // --- Language ---
                         _SectionHeader(l10n.language),
-                        RadioGroup<String?>(
-                          groupValue: settings.localeTag,
-                          onChanged: (v) => context.read<SettingsBloc>().add(
-                            SettingsLocaleChanged(v),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 4,
                           ),
-                          child: const Column(
-                            children: [
-                              RadioListTile<String?>(
-                                title: Text('Follow device'),
+                          child: SegmentedButton<String?>(
+                            segments: const [
+                              ButtonSegment(
                                 value: null,
+                                label: Text('Auto'),
+                                icon: Icon(Icons.phone_android_rounded),
                               ),
-                              RadioListTile<String?>(
-                                title: Text('English'),
+                              ButtonSegment(
                                 value: 'en',
+                                label: Text('English'),
+                                icon: Icon(Icons.language_rounded),
                               ),
-                              RadioListTile<String?>(
-                                title: Text('Indonesia'),
+                              ButtonSegment(
                                 value: 'id',
+                                label: Text('Indonesia'),
+                                icon: Icon(Icons.language_rounded),
                               ),
                             ],
+                            selected: {settings.localeTag},
+                            onSelectionChanged: (v) => context
+                                .read<SettingsBloc>()
+                                .add(SettingsLocaleChanged(v.first)),
+                            style: const ButtonStyle(
+                              iconSize: WidgetStatePropertyAll(16),
+                              textStyle: WidgetStatePropertyAll(
+                                TextStyle(fontSize: 12),
+                              ),
+                            ),
                           ),
                         ),
-                        const Divider(),
+                        const Divider(height: 24),
 
                         // --- Translation ---
                         const _SectionHeader('Quran Translation'),
                         _TranslationPicker(
                           current: settings.translationEditionId,
                         ),
-                        const Divider(),
+                        const Divider(height: 24),
+
+                        // --- Arabic font size ---
+                        const _SectionHeader('Ayah Font Size'),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.text_fields_rounded, size: 16),
+                              Expanded(
+                                child: Slider(
+                                  value: settings.arabicFontSize,
+                                  min: 18,
+                                  max: 40,
+                                  divisions: 11,
+                                  label:
+                                      '${settings.arabicFontSize.toInt()} sp',
+                                  onChanged: (v) => context
+                                      .read<SettingsBloc>()
+                                      .add(SettingsArabicFontSizeChanged(v)),
+                                ),
+                              ),
+                              SizedBox(
+                                width: 40,
+                                child: Text(
+                                  '${settings.arabicFontSize.toInt()}',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 14,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Preview
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                          child: Directionality(
+                            textDirection: TextDirection.rtl,
+                            child: Text(
+                              'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ',
+                              style: TextStyle(
+                                fontFamily: 'Scheherazade New',
+                                fontSize: settings.arabicFontSize,
+                                height: 1.9,
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                        const Divider(height: 24),
 
                         // --- Sleep Timer ---
                         _SectionHeader(l10n.sleepTimer),
@@ -141,23 +230,70 @@ class SettingsScreen extends StatelessWidget {
                             ),
                           ),
                         ),
-                        const Divider(),
+                        const Divider(height: 24),
 
                         // --- Bookmarks ---
                         const _SectionHeader('Bookmarks'),
                         BlocBuilder<BookmarkBloc, BookmarkState>(
                           builder: (context, bState) {
                             if (bState.bookmarks.isEmpty) {
-                              return const ListTile(
-                                title: Text('No bookmarks saved.'),
+                              return const Padding(
+                                padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
+                                child: Text(
+                                  'No bookmarks saved yet.\nTap the bookmark icon while playing to save a position.',
+                                  style: TextStyle(fontSize: 13),
+                                ),
                               );
                             }
                             return Column(
                               children: bState.bookmarks.map((b) {
+                                // Resolve reciter name from SearchBloc state.
+                                final reciterName =
+                                    context
+                                        .read<SearchBloc>()
+                                        .state
+                                        .reciters
+                                        .where(
+                                          (e) => e.identifier == b.editionId,
+                                        )
+                                        .map((e) => e.englishName)
+                                        .firstOrNull ??
+                                    b.editionId;
+                                final position = DurationFormatter.format(
+                                  Duration(milliseconds: b.positionMs),
+                                );
                                 return ListTile(
-                                  leading: const Icon(Icons.bookmark_outline),
-                                  title: Text('Surah ${b.surahNumber}'),
-                                  subtitle: Text(b.editionId),
+                                  leading: Container(
+                                    width: 40,
+                                    height: 40,
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.primaryContainer,
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    alignment: Alignment.center,
+                                    child: Text(
+                                      '${b.surahNumber}',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w800,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onPrimaryContainer,
+                                      ),
+                                    ),
+                                  ),
+                                  title: Text(
+                                    'Surah ${b.surahNumber}',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  subtitle: Text(
+                                    '$reciterName · $position',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                   trailing: IconButton(
                                     icon: const Icon(Icons.delete_outline),
                                     tooltip: 'Delete',
@@ -173,12 +309,12 @@ class SettingsScreen extends StatelessWidget {
                         // bottom breathing room
                         const SizedBox(height: 32),
                       ],
-                    ), // Column (content)
-                  ), // ConstrainedBox
-                ), // Align
-              ), // SliverToBoxAdapter
-            ], // slivers
-          ); // CustomScrollView
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
         },
       ),
     );

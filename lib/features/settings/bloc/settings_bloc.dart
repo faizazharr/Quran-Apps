@@ -42,6 +42,13 @@ class SettingsTranslationEditionChanged extends SettingsEvent {
   List<Object?> get props => [editionId];
 }
 
+class SettingsArabicFontSizeChanged extends SettingsEvent {
+  final double fontSize;
+  const SettingsArabicFontSizeChanged(this.fontSize);
+  @override
+  List<Object?> get props => [fontSize];
+}
+
 // ---------- State ----------
 
 enum SettingsStatus { initial, loading, ready, error }
@@ -82,6 +89,7 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     on<SettingsThemeChanged>(_onThemeChanged);
     on<SettingsLocaleChanged>(_onLocaleChanged);
     on<SettingsTranslationEditionChanged>(_onTranslationEditionChanged);
+    on<SettingsArabicFontSizeChanged>(_onArabicFontSizeChanged);
   }
 
   Future<void> _onLoad(
@@ -175,6 +183,16 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     final updated = state.settings.copyWith(
       translationEditionId: event.editionId,
     );
+    emit(state.copyWith(settings: updated));
+    await _repo.save(updated);
+  }
+
+  Future<void> _onArabicFontSizeChanged(
+    SettingsArabicFontSizeChanged event,
+    Emitter<SettingsState> emit,
+  ) async {
+    final size = event.fontSize.clamp(18.0, 40.0);
+    final updated = state.settings.copyWith(arabicFontSize: size);
     emit(state.copyWith(settings: updated));
     await _repo.save(updated);
   }

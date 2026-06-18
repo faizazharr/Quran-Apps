@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 // ignore_for_file: avoid_slow_async_io
+import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 import 'package:path/path.dart' as p;
@@ -199,7 +200,8 @@ class JustAudioPlayerService implements IAudioPlayerService {
       if (byteData == null) return null;
       await artFile.writeAsBytes(byteData.buffer.asUint8List());
       return artFile.uri;
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('Artwork generation failed for ${track.id}: $e\n$st');
       return null;
     }
   }

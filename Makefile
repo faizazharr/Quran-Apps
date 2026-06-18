@@ -54,22 +54,45 @@ test-coverage: ## Run tests with coverage report
 	@flutter test --coverage
 
 # ── Build ─────────────────────────────────────────────────────────────────────
+# Prereqs for signed local builds:
+#   android/upload-keystore.jks  — generated once (already done)
+#   android/key.properties       — already written (gitignored)
 
 .PHONY: build-apk
-build-apk: ## Build debug APK
+build-apk: ## Build debug APK (com.labs.quran.debug)
 	@flutter build apk --debug
+	@echo "✓ APK → build/app/outputs/flutter-apk/app-debug.apk"
+
+.PHONY: build-apk-release
+build-apk-release: _check-signing ## Build signed release APK
+	@flutter build apk --release
+	@echo "✓ APK → build/app/outputs/flutter-apk/app-release.apk"
 
 .PHONY: build-aab
-build-aab: ## Build release AAB (unsigned — uses debug signing fallback)
+build-aab: _check-signing ## Build signed release AAB (upload to Play Store)
 	@echo "→ flutter build appbundle --release"
 	@flutter build appbundle --release
 	@echo "✓ AAB → build/app/outputs/bundle/release/app-release.aab"
+	@du -sh build/app/outputs/bundle/release/app-release.aab
 
 .PHONY: build-ipa
-build-ipa: ## Build release IPA (requires valid signing identity)
+build-ipa: ## Build release IPA (requires Apple distribution cert)
 	@echo "→ flutter build ipa --release"
 	@flutter build ipa --release --export-options-plist=ios/ExportOptions.plist
 	@echo "✓ IPA → build/ios/ipa/"
+
+# Guard: fail early if signing files are missing.
+.PHONY: _check-signing
+_check-signing:
+	@test -f android/upload-keystore.jks || \
+	  (echo "✗ android/upload-keystore.jks not found."; \
+	   echo "  Run: keytool -genkey -v -keystore android/upload-keystore.jks \\"; \
+	   echo "         -alias upload -keyalg RSA -keysize 2048 -validity 10000"; \
+	   exit 1)
+	@test -f android/key.properties || \
+	  (echo "✗ android/key.properties not found."; \
+	   echo "  Copy android/key.properties.example and fill in credentials."; \
+	   exit 1)
 
 .PHONY: clean
 clean: ## flutter clean

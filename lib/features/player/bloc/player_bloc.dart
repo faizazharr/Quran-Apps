@@ -80,9 +80,15 @@ class PlayerSpeedChanged extends PlayerEvent {
   List<Object?> get props => [speed];
 }
 
+class PlayerRepeatModeChanged extends PlayerEvent {
+  const PlayerRepeatModeChanged();
+}
+
 // ---------- State ----------
 
 enum PlaybackStatus { idle, loading, ready, playing, paused, completed, error }
+
+enum PlayerRepeatMode { off, one, all }
 
 class PlayerState extends Equatable {
   final Track? track;
@@ -91,6 +97,7 @@ class PlayerState extends Equatable {
   final Duration duration;
   final String? errorMessage;
   final double speed;
+  final PlayerRepeatMode repeatMode;
 
   const PlayerState({
     this.track,
@@ -99,6 +106,7 @@ class PlayerState extends Equatable {
     this.duration = Duration.zero,
     this.errorMessage,
     this.speed = 1.0,
+    this.repeatMode = PlayerRepeatMode.off,
   });
 
   bool get hasTrack => track != null;
@@ -119,6 +127,7 @@ class PlayerState extends Equatable {
     String? errorMessage,
     bool clearError = false,
     double? speed,
+    PlayerRepeatMode? repeatMode,
   }) {
     return PlayerState(
       track: track ?? this.track,
@@ -127,6 +136,7 @@ class PlayerState extends Equatable {
       duration: duration ?? this.duration,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
       speed: speed ?? this.speed,
+      repeatMode: repeatMode ?? this.repeatMode,
     );
   }
 
@@ -138,6 +148,7 @@ class PlayerState extends Equatable {
     duration,
     errorMessage,
     speed,
+    repeatMode,
   ];
 }
 
@@ -152,6 +163,10 @@ class PlayerBloc extends Bloc<PlayerEvent, PlayerState> {
   StreamSubscription<AudioPlaybackSnapshot>? _playbackSub;
   StreamSubscription<Object>? _errorSub;
 
+  // Throttle position events: emit at most once per 250 ms during steady
+  // playback. Seeks (large jumps) always pass through immediately.
+  int _lastEmittedPositionMs = -500;
+
   PlayerBloc(this._player, {AudioErrorMapper? errorMapper})
     : _errorMapper = errorMapper ?? AudioErrorMapper(),
       super(const PlayerState()) {
@@ -161,6 +176,7 @@ class PlayerBloc extends Bloc<PlayerEvent, PlayerState> {
     on<PlayerSeekRequested>(_onSeek);
     on<PlayerStopRequested>(_onStop);
     on<PlayerSpeedChanged>(_onSpeedChanged);
+    on<PlayerRepeatModeChanged>(_onPlayerRepeatModeChanged);
     on<_PlayerPositionUpdated>(_onPositionUpdated);
     on<_PlayerDurationUpdated>(_onDurationUpdated);
     on<_PlayerPlaybackUpdated>(_onPlaybackUpdated);
@@ -170,9 +186,13 @@ class PlayerBloc extends Bloc<PlayerEvent, PlayerState> {
   }
 
   void _wireStreams() {
-    _positionSub = _player.positionStream.listen(
-      (p) => add(_PlayerPositionUpdated(p)),
-    );
+    _positionSub = _player.positionStream.listen((p) {
+      final ms = p.inMilliseconds;
+      if ((ms - _lastEmittedPositionMs).abs() >= 250) {
+        _lastEmittedPositionMs = ms;
+        add(_PlayerPositionUpdated(p));
+      }
+    });
     _durationSub = _player.durationStream.listen(
       (d) => add(_PlayerDurationUpdated(d)),
     );
@@ -197,7 +217,15 @@ class PlayerBloc extends Bloc<PlayerEvent, PlayerState> {
       return;
     }
 
-    emit(PlayerState(track: event.track, status: PlaybackStatus.loading));
+    emit(
+      state.copyWith(
+        track: event.track,
+        status: PlaybackStatus.loading,
+        position: Duration.zero,
+        duration: Duration.zero,
+        clearError: true,
+      ),
+    );
     try {
       await _player.load(event.track);
       await _player.play();
@@ -228,6 +256,7 @@ class PlayerBloc extends Bloc<PlayerEvent, PlayerState> {
   ) async {
     if (!state.hasTrack) return;
     final clamped = _clampPosition(event.position, state.duration);
+    _lastEmittedPositionMs = -500; // reset throttle so next stream event fires
     await _player.seek(clamped);
     emit(state.copyWith(position: clamped));
   }
@@ -247,6 +276,18 @@ class PlayerBloc extends Bloc<PlayerEvent, PlayerState> {
     final speed = event.speed.clamp(0.5, 2.0);
     await _player.setSpeed(speed);
     emit(state.copyWith(speed: speed));
+  }
+
+  void _onPlayerRepeatModeChanged(
+    PlayerRepeatModeChanged event,
+    Emitter<PlayerState> emit,
+  ) {
+    final next = switch (state.repeatMode) {
+      PlayerRepeatMode.off => PlayerRepeatMode.one,
+      PlayerRepeatMode.one => PlayerRepeatMode.all,
+      PlayerRepeatMode.all => PlayerRepeatMode.off,
+    };
+    emit(state.copyWith(repeatMode: next));
   }
 
   void _onPositionUpdated(
@@ -272,6 +313,12 @@ class PlayerBloc extends Bloc<PlayerEvent, PlayerState> {
     if (!state.hasTrack) return;
     final s = event.snapshot;
     final PlaybackStatus next;
+    if (s.completed && state.repeatMode == PlayerRepeatMode.one) {
+      // Repeat-one: restart from the beginning automatically.
+      add(const PlayerSeekRequested(Duration.zero));
+      add(const PlayerPlayRequested());
+      return;
+    }
     if (s.completed) {
       next = PlaybackStatus.completed;
     } else if (s.buffering) {

@@ -46,7 +46,7 @@ class _PlayerSeekBarState extends State<PlayerSeekBar> {
                   inactiveTrackColor: Colors.white.withValues(alpha: 0.25),
                   thumbColor: Colors.white,
                   overlayColor: Colors.white.withValues(alpha: 0.20),
-                  trackHeight: 3,
+                  trackHeight: 4,
                 ),
                 child: Slider(
                   value: value,

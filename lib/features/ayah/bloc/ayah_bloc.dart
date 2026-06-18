@@ -40,12 +40,14 @@ class AyahLoadMoreRequested extends AyahEvent {
 }
 
 /// Fired by PlayerBloc listener when the position changes so the active ayah
-/// can be derived from the ayah list.
+/// can be highlighted. Both position and total duration are required so the
+/// handler can calculate the proportional index without storing audio state.
 class AyahPositionUpdated extends AyahEvent {
   final Duration position;
-  const AyahPositionUpdated(this.position);
+  final Duration duration;
+  const AyahPositionUpdated(this.position, {required this.duration});
   @override
-  List<Object?> get props => [position];
+  List<Object?> get props => [position, duration];
 }
 
 // ---------- State ----------
@@ -235,10 +237,23 @@ class AyahBloc extends Bloc<AyahEvent, AyahState> {
 
   void _onPositionUpdated(AyahPositionUpdated event, Emitter<AyahState> emit) {
     if (state.ayahs.isEmpty) return;
-    // Ayah boundaries are not available from the AlQuran Cloud audio endpoint,
-    // so we distribute position evenly across ayahs as an approximation.
-    // TODO(future): replace with real ayah timing data when available.
-    emit(state.copyWith(activeIndex: 0));
+    final totalMs = event.duration.inMilliseconds;
+    if (totalMs <= 0) return;
+    // Distribute position evenly across ayahs (approximation — the AlQuran
+    // Cloud audio endpoint does not expose per-ayah timestamps).
+    final progress = (event.position.inMilliseconds / totalMs).clamp(0.0, 1.0);
+    final index = (progress * state.ayahs.length).floor().clamp(
+      0,
+      state.ayahs.length - 1,
+    );
+    if (index != state.activeIndex) {
+      // If the target ayah is beyond what the lazy list has rendered, expand
+      // visibleCount so _scrollToActive can find the item's GlobalKey context.
+      final newVisible = index >= state.visibleCount
+          ? ((index ~/ _kPageSize + 1) * _kPageSize).clamp(0, state.ayahs.length)
+          : state.visibleCount;
+      emit(state.copyWith(activeIndex: index, visibleCount: newVisible));
+    }
   }
 
   void _onLoadMore(AyahLoadMoreRequested event, Emitter<AyahState> emit) {

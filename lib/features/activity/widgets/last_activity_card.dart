@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../core/theme/app_theme.dart';
 import '../bloc/activity_bloc.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -102,7 +103,6 @@ class _ActivityTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
-    const brandGreen = Color(0xFF0F7C5A);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -121,10 +121,10 @@ class _ActivityTile extends StatelessWidget {
             width: 34,
             height: 34,
             decoration: BoxDecoration(
-              color: brandGreen.withValues(alpha: 0.10),
+              color: AppColors.primary.withValues(alpha: 0.10),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, size: 16, color: brandGreen),
+            child: Icon(icon, size: 16, color: AppColors.primary),
           ),
           const SizedBox(width: 10),
           // Text

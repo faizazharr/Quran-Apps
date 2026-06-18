@@ -7,7 +7,7 @@ import 'package:flutter/widgets.dart';
 class Breakpoints {
   Breakpoints._();
 
-  /// < 600 dp — phones in portrait, foldable inner display closed.
+  /// 0–599 dp — phones in portrait, foldable inner display closed.
   static const double compact = 600;
 
   /// 600–839 dp — large phones in landscape, small tablets in portrait.
@@ -42,9 +42,14 @@ class ResponsiveInfo {
   factory ResponsiveInfo.of(BuildContext context) {
     final mq = MediaQuery.of(context);
     final w = mq.size.width;
-    final screen = w >= Breakpoints.medium
-        ? (w >= Breakpoints.expanded ? ScreenSize.expanded : ScreenSize.medium)
-        : ScreenSize.compact;
+    final ScreenSize screen;
+    if (w >= Breakpoints.expanded) {
+      screen = ScreenSize.expanded;
+    } else if (w >= Breakpoints.compact) {
+      screen = ScreenSize.medium;
+    } else {
+      screen = ScreenSize.compact;
+    }
     return ResponsiveInfo(
       size: mq.size,
       orientation: mq.orientation,
@@ -63,8 +68,9 @@ class ResponsiveInfo {
   /// (e.g. phone held in landscape).
   bool get isShortHeight => size.height < Breakpoints.shortHeight;
 
-  /// Use a side-by-side list/player layout when the screen is wide enough.
-  bool get useTwoPane =>
-      screenSize != ScreenSize.compact ||
-      (isLandscape && size.width >= Breakpoints.compact);
+  /// Use a side-by-side list/player layout when the screen is wide AND tall
+  /// enough. Short-height screens (landscape phone) stay single-column so the
+  /// right panel doesn't get crushed vertically.
+  /// Requires at least 720 dp so the left content column never drops below ~420 dp.
+  bool get useTwoPane => !isShortHeight && size.width >= 720;
 }

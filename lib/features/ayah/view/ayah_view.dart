@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../data/models/ayah.dart';
@@ -83,189 +84,207 @@ class _AyahViewState extends State<AyahView> {
     final l10n = AppLocalizations.of(context);
     final scheme = Theme.of(context).colorScheme;
 
-    return DraggableScrollableSheet(
-      expand: false,
-      initialChildSize: 0.6,
-      maxChildSize: 0.92,
-      minChildSize: 0.35,
-      builder: (context, sheetScrollController) {
-        // Use the sheet's scroll controller for the sheet handle dragging,
-        // but our own controller for load-more detection on the list.
-        return Column(
-          children: [
-            // Drag handle
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: scheme.onSurfaceVariant.withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(2),
+    return BlocListener<PlayerBloc, PlayerState>(
+      listenWhen: (prev, curr) =>
+          curr.hasTrack &&
+          curr.track?.surah.number ==
+              context.read<AyahBloc>().state.surahNumber &&
+          curr.position != prev.position,
+      listener: (context, playerState) {
+        context.read<AyahBloc>().add(
+          AyahPositionUpdated(
+            playerState.position,
+            duration: playerState.duration,
+          ),
+        );
+      },
+      child: DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.6,
+        maxChildSize: 0.92,
+        minChildSize: 0.35,
+        builder: (context, sheetScrollController) {
+          // Use the sheet's scroll controller for the sheet handle dragging,
+          // but our own controller for load-more detection on the list.
+          return Column(
+            children: [
+              // Drag handle
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: scheme.onSurfaceVariant.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
               ),
-            ),
 
-            // Header row
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 8, 4),
-              child: Row(
-                children: [
-                  const Icon(Icons.menu_book_rounded, size: 18),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: BlocSelector<AyahBloc, AyahState, _HeaderVM>(
-                      selector: (s) => _HeaderVM(
-                        englishName: s.surahEnglishName,
-                        arabicName: s.surahArabicName,
-                        number: s.surahNumber,
-                        totalAyahs: s.totalAyahs,
-                      ),
-                      builder: (context, vm) {
-                        final title = vm.englishName.isNotEmpty
-                            ? vm.englishName
-                            : (vm.number > 0 ? 'Surah ${vm.number}' : 'Quran');
-                        final subtitle = vm.totalAyahs > 0
-                            ? 'Surah ${vm.number} • ${vm.totalAyahs} Ayah'
-                            : '';
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    title,
-                                    style: Theme.of(
-                                      context,
-                                    ).textTheme.titleMedium,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                if (vm.arabicName.isNotEmpty)
-                                  Text(
-                                    vm.arabicName,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleMedium
-                                        ?.copyWith(
-                                          fontFamily: 'Amiri',
-                                          fontSize: 18,
-                                        ),
-                                  ),
-                              ],
-                            ),
-                            if (subtitle.isNotEmpty)
-                              Text(
-                                subtitle,
-                                style: Theme.of(context).textTheme.bodySmall
-                                    ?.copyWith(
-                                      color: Theme.of(
+              // Header row
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 8, 4),
+                child: Row(
+                  children: [
+                    const Icon(Icons.menu_book_rounded, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: BlocSelector<AyahBloc, AyahState, _HeaderVM>(
+                        selector: (s) => _HeaderVM(
+                          englishName: s.surahEnglishName,
+                          arabicName: s.surahArabicName,
+                          number: s.surahNumber,
+                          totalAyahs: s.totalAyahs,
+                        ),
+                        builder: (context, vm) {
+                          final title = vm.englishName.isNotEmpty
+                              ? vm.englishName
+                              : (vm.number > 0
+                                    ? 'Surah ${vm.number}'
+                                    : 'Quran');
+                          final subtitle = vm.totalAyahs > 0
+                              ? 'Surah ${vm.number} • ${vm.totalAyahs} Ayah'
+                              : '';
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      title,
+                                      style: Theme.of(
                                         context,
-                                      ).colorScheme.onSurfaceVariant,
+                                      ).textTheme.titleMedium,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
+                                  ),
+                                  if (vm.arabicName.isNotEmpty)
+                                    Text(
+                                      vm.arabicName,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium
+                                          ?.copyWith(
+                                            fontFamily: 'Amiri',
+                                            fontSize: 18,
+                                          ),
+                                    ),
+                                ],
                               ),
-                          ],
+                              if (subtitle.isNotEmpty)
+                                Text(
+                                  subtitle,
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onSurfaceVariant,
+                                      ),
+                                ),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                    // Translation toggle button
+                    BlocBuilder<AyahBloc, AyahState>(
+                      buildWhen: (p, c) =>
+                          p.showTranslation != c.showTranslation,
+                      builder: (context, state) {
+                        return TextButton.icon(
+                          icon: Icon(
+                            state.showTranslation
+                                ? Icons.translate
+                                : Icons.translate_outlined,
+                            size: 18,
+                          ),
+                          label: Text(
+                            state.showTranslation
+                                ? l10n.hideTranslation
+                                : l10n.showTranslation,
+                          ),
+                          onPressed: () => context.read<AyahBloc>().add(
+                            const AyahTranslationToggled(),
+                          ),
                         );
                       },
                     ),
-                  ),
-                  // Translation toggle button
-                  BlocBuilder<AyahBloc, AyahState>(
-                    buildWhen: (p, c) => p.showTranslation != c.showTranslation,
-                    builder: (context, state) {
-                      return TextButton.icon(
-                        icon: Icon(
-                          state.showTranslation
-                              ? Icons.translate
-                              : Icons.translate_outlined,
-                          size: 18,
-                        ),
-                        label: Text(
-                          state.showTranslation
-                              ? l10n.hideTranslation
-                              : l10n.showTranslation,
-                        ),
-                        onPressed: () => context.read<AyahBloc>().add(
-                          const AyahTranslationToggled(),
+                  ],
+                ),
+              ),
+
+              const Divider(height: 1),
+
+              // Ayah list
+              Expanded(
+                child: BlocBuilder<AyahBloc, AyahState>(
+                  builder: (context, state) {
+                    if (state.status == AyahStatus.loading ||
+                        state.status == AyahStatus.initial) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+
+                    if (state.status == AyahStatus.error) {
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Text(
+                            state.errorMessage ?? 'Failed to load ayahs.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: scheme.error),
+                          ),
                         ),
                       );
-                    },
-                  ),
-                ],
-              ),
-            ),
+                    }
 
-            const Divider(height: 1),
+                    if (state.ayahs.isEmpty) {
+                      return const Center(child: Text('No ayahs available.'));
+                    }
 
-            // Ayah list
-            Expanded(
-              child: BlocBuilder<AyahBloc, AyahState>(
-                builder: (context, state) {
-                  if (state.status == AyahStatus.loading ||
-                      state.status == AyahStatus.initial) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
+                    final visible = state.visibleAyahs;
+                    final hasMore = state.hasMore;
 
-                  if (state.status == AyahStatus.error) {
-                    return Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Text(
-                          state.errorMessage ?? 'Failed to load ayahs.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: scheme.error),
-                        ),
+                    return ListView.separated(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
                       ),
-                    );
-                  }
+                      itemCount: visible.length + (hasMore ? 1 : 0),
+                      separatorBuilder: (_, _) =>
+                          const Divider(height: 24, indent: 8, endIndent: 8),
+                      itemBuilder: (context, index) {
+                        if (index == visible.length) {
+                          return const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 16),
+                            child: Center(child: CircularProgressIndicator()),
+                          );
+                        }
+                        final ayah = visible[index];
+                        final isActive = index == state.activeIndex;
+                        final translation =
+                            state.showTranslation &&
+                                index < state.visibleTranslations.length
+                            ? state.visibleTranslations[index]
+                            : null;
 
-                  if (state.ayahs.isEmpty) {
-                    return const Center(child: Text('No ayahs available.'));
-                  }
-
-                  final visible = state.visibleAyahs;
-                  final hasMore = state.hasMore;
-
-                  return ListView.separated(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 12,
-                    ),
-                    itemCount: visible.length + (hasMore ? 1 : 0),
-                    separatorBuilder: (_, _) =>
-                        const Divider(height: 24, indent: 8, endIndent: 8),
-                    itemBuilder: (context, index) {
-                      if (index == visible.length) {
-                        return const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 16),
-                          child: Center(child: CircularProgressIndicator()),
+                        return _AyahTile(
+                          ayah: ayah,
+                          translation: translation?.text,
+                          isActive: isActive,
+                          scheme: scheme,
                         );
-                      }
-                      final ayah = visible[index];
-                      final isActive = index == state.activeIndex;
-                      final translation =
-                          state.showTranslation &&
-                              index < state.visibleTranslations.length
-                          ? state.visibleTranslations[index]
-                          : null;
-
-                      return _AyahTile(
-                        ayah: ayah,
-                        translation: translation?.text,
-                        isActive: isActive,
-                        scheme: scheme,
-                      );
-                    },
-                  );
-                },
+                      },
+                    );
+                  },
+                ),
               ),
-            ),
-          ],
-        );
-      },
+            ],
+          );
+        },
+      ),
     );
   }
 }
@@ -283,9 +302,70 @@ class _AyahTile extends StatelessWidget {
     required this.scheme,
   });
 
+  void _showCopyMenu(BuildContext outerCtx) {
+    showModalBottomSheet<void>(
+      context: outerCtx,
+      builder: (sheetCtx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  color: scheme.onSurfaceVariant.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.copy_rounded),
+              title: const Text('Copy Arabic text'),
+              onTap: () {
+                Clipboard.setData(ClipboardData(text: ayah.text));
+                Navigator.pop(sheetCtx);
+                ScaffoldMessenger.of(outerCtx).showSnackBar(
+                  const SnackBar(
+                    content: Text('Copied to clipboard'),
+                    duration: Duration(seconds: 2),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              },
+            ),
+            if (translation != null)
+              ListTile(
+                leading: const Icon(Icons.translate_rounded),
+                title: const Text('Copy with translation'),
+                onTap: () {
+                  Clipboard.setData(
+                    ClipboardData(
+                      text: '${ayah.text}\n\n$translation',
+                    ),
+                  );
+                  Navigator.pop(sheetCtx);
+                  ScaffoldMessenger.of(outerCtx).showSnackBar(
+                    const SnackBar(
+                      content: Text('Copied to clipboard'),
+                      duration: Duration(seconds: 2),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return AnimatedContainer(
+    return GestureDetector(
+      onLongPress: () => _showCopyMenu(context),
+      child: AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
       decoration: BoxDecoration(
@@ -348,7 +428,8 @@ class _AyahTile extends StatelessWidget {
           ],
         ],
       ),
-    );
+    ),    // AnimatedContainer
+    );    // GestureDetector
   }
 }
 

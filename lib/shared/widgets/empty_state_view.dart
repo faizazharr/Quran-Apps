@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../core/responsive/responsive.dart';
+
 /// Friendly empty state with optional CTA.
 class EmptyStateView extends StatelessWidget {
   final IconData icon;
@@ -20,22 +22,27 @@ class EmptyStateView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final r = ResponsiveInfo.of(context);
+    final iconSize = r.isShortHeight ? 64.0 : 96.0;
+    final innerIconSize = r.isShortHeight ? 30.0 : 44.0;
+    final padding = r.isShortHeight ? 16.0 : 32.0;
+    final gap = r.isShortHeight ? 12.0 : 20.0;
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: EdgeInsets.all(padding),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 96,
-              height: 96,
+              width: iconSize,
+              height: iconSize,
               decoration: BoxDecoration(
                 color: scheme.primaryContainer.withValues(alpha: 0.6),
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, size: 44, color: scheme.primary),
+              child: Icon(icon, size: innerIconSize, color: scheme.primary),
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: gap),
             Text(
               title,
               textAlign: TextAlign.center,

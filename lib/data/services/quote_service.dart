@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/result/result.dart';
 import '../../core/utils/random_service.dart';
+import '../models/app_settings.dart';
 import '../models/quote.dart';
 import '../repositories/ayah_repository.dart';
 import '../repositories/quran_repository.dart';
@@ -55,7 +56,9 @@ class QuoteServiceImpl implements IQuoteService {
       final settingsResult = await _settingsRepo.load();
       final settings = settingsResult.dataOrNull;
       final arabicEdition = settings?.arabicEditionId ?? 'quran-simple';
-      final translationEdition = settings?.translationEditionId ?? 'en.walk';
+      final translationEdition =
+          settings?.translationEditionId ??
+          AppSettings.defaults.translationEditionId;
 
       final ayahsResult = await _ayahRepo.getAyahs(
         surahNumber: surah.number,

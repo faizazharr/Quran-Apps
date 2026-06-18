@@ -166,18 +166,20 @@ class SurahTile extends StatelessWidget {
 
 // ── Shared dot separator ──────────────────────────────────────────────────
 
-const Widget _dot = _Dot();
+const _Dot _dot = _Dot();
 
 class _Dot extends StatelessWidget {
   const _Dot();
   @override
   Widget build(BuildContext context) {
-    return const SizedBox(
+    return SizedBox(
       width: 3,
       height: 3,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: Color(0x80888888),
+          color: Theme.of(
+            context,
+          ).colorScheme.onSurfaceVariant.withValues(alpha: 0.45),
           shape: BoxShape.circle,
         ),
       ),

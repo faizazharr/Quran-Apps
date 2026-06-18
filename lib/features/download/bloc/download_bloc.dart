@@ -80,13 +80,10 @@ class DownloadState extends Equatable {
   });
 
   DownloadRecord? recordFor(int surahNumber, String editionId) {
-    try {
-      return records.firstWhere(
-        (r) => r.surahNumber == surahNumber && r.editionId == editionId,
-      );
-    } catch (_) {
-      return null;
-    }
+    final matches = records.where(
+      (r) => r.surahNumber == surahNumber && r.editionId == editionId,
+    );
+    return matches.isEmpty ? null : matches.first;
   }
 
   DownloadState copyWith({

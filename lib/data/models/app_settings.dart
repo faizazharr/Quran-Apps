@@ -20,12 +20,16 @@ class AppSettings extends Equatable {
 
   final bool showTranslation;
 
+  /// Font size for Arabic ayah text. Default 26.0, range 18–40.
+  final double arabicFontSize;
+
   const AppSettings({
     this.themeMode = AppThemeMode.system,
     this.localeTag,
     this.arabicEditionId = 'quran-simple',
     this.translationEditionId = 'id.indonesian',
     this.showTranslation = false,
+    this.arabicFontSize = 26.0,
   });
 
   static const AppSettings defaults = AppSettings();
@@ -37,12 +41,14 @@ class AppSettings extends Equatable {
     String? arabicEditionId,
     String? translationEditionId,
     bool? showTranslation,
+    double? arabicFontSize,
   }) => AppSettings(
     themeMode: themeMode ?? this.themeMode,
     localeTag: clearLocale ? null : (localeTag ?? this.localeTag),
     arabicEditionId: arabicEditionId ?? this.arabicEditionId,
     translationEditionId: translationEditionId ?? this.translationEditionId,
     showTranslation: showTranslation ?? this.showTranslation,
+    arabicFontSize: arabicFontSize ?? this.arabicFontSize,
   );
 
   @override
@@ -52,5 +58,6 @@ class AppSettings extends Equatable {
     arabicEditionId,
     translationEditionId,
     showTranslation,
+    arabicFontSize,
   ];
 }

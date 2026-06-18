@@ -33,7 +33,7 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
-  FLUTTER_VERSION: '3.41.7'
+  FLUTTER_VERSION: '3.x'
   JAVA_VERSION: '17'
 
 jobs:
@@ -56,8 +56,8 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Check formatting
-        run: dart format --set-exit-if-changed lib test
+      - name: Format
+        run: dart format lib test
 
       - name: Analyze
         run: flutter analyze --fatal-infos

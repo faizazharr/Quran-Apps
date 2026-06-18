@@ -40,7 +40,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  FLUTTER_VERSION: '3.41.7'
+  FLUTTER_VERSION: '3.x'
   JAVA_VERSION: '17'
   PACKAGE_NAME: com.labs.quran
 

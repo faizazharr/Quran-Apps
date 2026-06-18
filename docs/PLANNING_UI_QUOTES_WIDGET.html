@@ -1,0 +1,1543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Quran App — UI Fix + Quotes + Widget Planning</title>
+<style>
+  :root {
+    --green:       #0F7C5A;
+    --green-dark:  #0A4D38;
+    --green-light: #E6F4EF;
+    --gold:        #E5B25D;
+    --gold-light:  #FDF3E3;
+    --red:         #D94040;
+    --red-light:   #FDF0F0;
+    --blue:        #2563EB;
+    --blue-light:  #EEF4FF;
+    --text:        #1A1A1A;
+    --text-muted:  #6B7280;
+    --border:      #E5E7EB;
+    --surface:     #F9FAFB;
+    --white:       #FFFFFF;
+    --radius:      12px;
+    --shadow:      0 1px 4px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.05);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--surface);
+    color: var(--text);
+    line-height: 1.6;
+    font-size: 15px;
+  }
+
+  /* ── TOP HERO ── */
+  .hero {
+    background: linear-gradient(135deg, var(--green), var(--green-dark));
+    padding: 48px 32px 40px;
+    color: white;
+    text-align: center;
+  }
+  .hero-badge {
+    display: inline-block;
+    background: rgba(255,255,255,.18);
+    border: 1px solid rgba(255,255,255,.3);
+    border-radius: 999px;
+    padding: 4px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .6px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+  .hero h1 { font-size: clamp(22px, 4vw, 34px); font-weight: 800; line-height: 1.2; margin-bottom: 10px; }
+  .hero p  { font-size: 15px; opacity: .8; max-width: 560px; margin: 0 auto 24px; }
+  .hero-meta { display: flex; justify-content: center; gap: 24px; flex-wrap: wrap; font-size: 13px; opacity: .75; }
+  .hero-meta span { display: flex; align-items: center; gap: 6px; }
+
+  /* ── NAV TABS ── */
+  .nav { background: white; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
+  .nav-inner { display: flex; overflow-x: auto; scrollbar-width: none; max-width: 960px; margin: 0 auto; }
+  .nav-inner::-webkit-scrollbar { display: none; }
+  .nav-tab {
+    flex: none; padding: 14px 20px; font-size: 13px; font-weight: 600;
+    color: var(--text-muted); border-bottom: 2px solid transparent;
+    cursor: pointer; white-space: nowrap; transition: all .2s;
+    text-decoration: none; display: flex; align-items: center; gap: 6px;
+  }
+  .nav-tab:hover { color: var(--green); }
+  .nav-tab.active { color: var(--green); border-color: var(--green); }
+
+  /* ── LAYOUT ── */
+  .main { max-width: 960px; margin: 0 auto; padding: 32px 20px 80px; }
+  section { margin-bottom: 56px; }
+  section:target { scroll-margin-top: 60px; }
+
+  /* ── SECTION TITLES ── */
+  .section-title {
+    display: flex; align-items: center; gap: 12px;
+    font-size: 22px; font-weight: 800; margin-bottom: 6px;
+  }
+  .section-icon {
+    width: 40px; height: 40px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; flex-shrink: 0;
+  }
+  .section-icon.green  { background: var(--green-light); }
+  .section-icon.gold   { background: var(--gold-light); }
+  .section-icon.blue   { background: var(--blue-light); }
+  .section-subtitle { color: var(--text-muted); margin-bottom: 24px; font-size: 14px; padding-left: 52px; }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--white); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px 24px;
+    box-shadow: var(--shadow); margin-bottom: 16px;
+  }
+  .card-title { font-weight: 700; font-size: 15px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+
+  /* ── SEVERITY BADGES ── */
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 700;
+    letter-spacing: .3px; text-transform: uppercase;
+  }
+  .badge-high   { background: #FEE2E2; color: #B91C1C; }
+  .badge-medium { background: #FEF3C7; color: #92400E; }
+  .badge-low    { background: #DBEAFE; color: #1D4ED8; }
+  .badge-new    { background: var(--green-light); color: var(--green-dark); }
+
+  /* ── BUG ITEMS ── */
+  .bug-grid { display: grid; gap: 14px; }
+
+  .bug-item {
+    background: white; border: 1px solid var(--border); border-radius: var(--radius);
+    overflow: hidden; box-shadow: var(--shadow);
+  }
+  .bug-header {
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+    padding: 14px 18px 12px; cursor: pointer; user-select: none;
+  }
+  .bug-header-left { display: flex; align-items: flex-start; gap: 12px; flex: 1; min-width: 0; }
+  .bug-num { font-size: 11px; font-weight: 700; color: var(--text-muted); margin-top: 2px; flex-shrink: 0; }
+  .bug-title { font-weight: 700; font-size: 14px; line-height: 1.4; }
+  .bug-location { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .bug-chevron { color: var(--text-muted); font-size: 16px; flex-shrink: 0; margin-top: 2px; transition: transform .2s; }
+  .bug-item.open .bug-chevron { transform: rotate(180deg); }
+
+  .bug-body { display: none; padding: 0 18px 16px; }
+  .bug-item.open .bug-body { display: block; }
+
+  .bug-body p { font-size: 13px; color: var(--text-muted); margin-bottom: 10px; }
+
+  /* code blocks */
+  pre {
+    background: #0F172A; color: #CBD5E1; border-radius: 8px;
+    padding: 14px 16px; font-size: 12px; line-height: 1.7;
+    overflow-x: auto; margin: 10px 0;
+  }
+  code { font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace; }
+  pre code { font-family: inherit; }
+  .hlc  { color: #64748B; }   /* comment */
+  .hlk  { color: #7DD3FC; }   /* keyword */
+  .hls  { color: #86EFAC; }   /* string */
+  .hln  { color: #FCA5A5; }   /* number/const */
+  .hlm  { color: #FDE68A; }   /* method/type */
+  .hlt  { color: #C4B5FD; }   /* tag/widget */
+  .hlp  { color: #F9A8D4; }   /* param */
+
+  /* fix diff */
+  .diff-removed { background: rgba(239,68,68,.15); color: #FCA5A5; }
+  .diff-added   { background: rgba(134,239,172,.15); color: #86EFAC; }
+
+  /* ── ARCHITECTURE DIAGRAM ── */
+  .arch {
+    background: white; border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 24px;
+    box-shadow: var(--shadow); margin-bottom: 24px;
+    font-size: 13px;
+  }
+  .arch-title { font-weight: 700; margin-bottom: 16px; font-size: 15px; }
+  .arch-flow {
+    display: flex; flex-wrap: wrap; gap: 0;
+    align-items: stretch; overflow-x: auto;
+  }
+  .arch-node {
+    background: var(--green-light); border: 1.5px solid var(--green);
+    border-radius: 10px; padding: 10px 16px; font-weight: 600;
+    font-size: 12px; color: var(--green-dark); text-align: center;
+    white-space: nowrap; flex-shrink: 0;
+  }
+  .arch-node.gold { background: var(--gold-light); border-color: var(--gold); color: #7A4F0D; }
+  .arch-node.blue { background: var(--blue-light); border-color: var(--blue); color: #1E40AF; }
+  .arch-node.gray { background: var(--surface); border-color: var(--border); color: var(--text-muted); }
+  .arch-arrow { display: flex; align-items: center; padding: 0 8px; color: var(--text-muted); font-size: 16px; }
+
+  /* ── STEPS ── */
+  .steps { counter-reset: step; display: grid; gap: 12px; }
+  .step {
+    background: white; border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 14px 18px; display: flex; gap: 14px; align-items: flex-start;
+    box-shadow: var(--shadow);
+  }
+  .step::before {
+    counter-increment: step; content: counter(step);
+    display: flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--green); color: white; font-size: 12px; font-weight: 800;
+    flex-shrink: 0; margin-top: 1px;
+  }
+  .step-body { flex: 1; }
+  .step-title { font-weight: 700; font-size: 14px; margin-bottom: 4px; }
+  .step-desc  { font-size: 13px; color: var(--text-muted); }
+
+  /* ── TABLE ── */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 12px 0; }
+  th { background: var(--surface); font-weight: 700; text-align: left; padding: 8px 12px; border: 1px solid var(--border); }
+  td { padding: 8px 12px; border: 1px solid var(--border); vertical-align: top; }
+  tr:nth-child(even) td { background: var(--surface); }
+
+  /* ── QUOTE PREVIEW ── */
+  .quote-mockup {
+    background: linear-gradient(135deg, #0F7C5A 0%, #0A4D38 100%);
+    border-radius: 20px; padding: 28px 24px; color: white;
+    max-width: 360px; box-shadow: 0 8px 32px rgba(15,124,90,.35);
+    margin: 20px auto;
+  }
+  .quote-surah-badge {
+    background: rgba(255,255,255,.18); border-radius: 999px;
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 12px; font-size: 11px; font-weight: 600;
+    letter-spacing: .4px; margin-bottom: 16px;
+  }
+  .quote-arabic {
+    font-size: 22px; line-height: 2; text-align: right;
+    font-family: 'Scheherazade New', 'Traditional Arabic', serif;
+    margin-bottom: 14px; direction: rtl;
+  }
+  .quote-translation { font-size: 13px; line-height: 1.6; opacity: .8; margin-bottom: 18px; }
+  .quote-footer { display: flex; justify-content: space-between; align-items: center; opacity: .7; font-size: 11px; }
+
+  /* ── WIDGET MOCKUPS ── */
+  .widget-row { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; margin: 24px 0; }
+  .widget-small, .widget-medium {
+    border-radius: 20px;
+    background: linear-gradient(135deg, #0F7C5A, #0A4D38);
+    color: white; overflow: hidden;
+  }
+  .widget-small { width: 155px; height: 155px; padding: 14px; display: flex; flex-direction: column; justify-content: space-between; }
+  .widget-medium { width: 330px; height: 155px; padding: 16px 18px; display: flex; gap: 16px; }
+  .widget-label { font-size: 9px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; opacity: .7; }
+  .widget-verse-ar { font-size: 13px; line-height: 1.7; direction: rtl; text-align: right; font-family: serif; margin-top: 6px; opacity: .95; }
+  .widget-surah { font-size: 10px; opacity: .6; margin-top: auto; }
+  .widget-medium-left { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .widget-medium-right { width: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; }
+  .widget-play-btn { width: 40px; height: 40px; background: rgba(255,255,255,.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+  .widget-verse-tr { font-size: 11px; opacity: .75; line-height: 1.5; margin-top: 6px; }
+
+  /* ── NOTIFICATION MOCKUP ── */
+  .notif-mockup {
+    background: rgba(255,255,255,.95); border-radius: 14px;
+    padding: 14px 16px; max-width: 340px; margin: 20px auto;
+    box-shadow: 0 4px 24px rgba(0,0,0,.18); font-size: 13px;
+    border: 1px solid rgba(0,0,0,.06);
+  }
+  .notif-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .notif-app-icon {
+    width: 20px; height: 20px; border-radius: 6px;
+    background: linear-gradient(135deg, #0F7C5A, #0A4D38);
+    display: flex; align-items: center; justify-content: center; font-size: 10px;
+  }
+  .notif-app-name { font-size: 11px; font-weight: 600; color: var(--text-muted); }
+  .notif-time { margin-left: auto; font-size: 11px; color: var(--text-muted); }
+  .notif-title { font-weight: 700; margin-bottom: 2px; }
+  .notif-body  { color: var(--text-muted); font-size: 12px; line-height: 1.4; }
+  .notif-arabic { font-family: serif; font-size: 15px; direction: rtl; text-align: right; margin-top: 6px; color: var(--green); }
+
+  /* ── CHECKLIST ── */
+  .checklist { display: grid; gap: 8px; margin: 12px 0; }
+  .check-item {
+    display: flex; align-items: flex-start; gap: 10px;
+    background: white; border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 14px; font-size: 13px; box-shadow: var(--shadow);
+  }
+  .check-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+  .check-body { flex: 1; }
+  .check-title { font-weight: 600; }
+  .check-sub { color: var(--text-muted); font-size: 12px; }
+
+  /* ── PACKAGE TABLE ── */
+  .pkg-card {
+    background: white; border: 1px solid var(--border); border-radius: var(--radius);
+    overflow: hidden; box-shadow: var(--shadow); margin-bottom: 14px;
+  }
+  .pkg-header {
+    background: var(--surface); padding: 10px 16px;
+    font-weight: 700; font-size: 13px; border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .pkg-row { display: flex; padding: 10px 16px; border-bottom: 1px solid var(--border); gap: 12px; font-size: 13px; align-items: flex-start; }
+  .pkg-row:last-child { border-bottom: none; }
+  .pkg-name { font-family: monospace; color: var(--green-dark); font-size: 12px; min-width: 220px; }
+  .pkg-desc { color: var(--text-muted); }
+
+  /* ── TIMELINE ── */
+  .timeline { position: relative; padding-left: 28px; }
+  .timeline::before {
+    content: ''; position: absolute; left: 10px; top: 8px; bottom: 0;
+    width: 2px; background: var(--border);
+  }
+  .tl-item { position: relative; margin-bottom: 24px; }
+  .tl-dot {
+    position: absolute; left: -24px; top: 4px;
+    width: 12px; height: 12px; border-radius: 50%;
+    background: var(--green); border: 2px solid white;
+    box-shadow: 0 0 0 2px var(--green);
+  }
+  .tl-phase { font-weight: 800; font-size: 13px; color: var(--green); margin-bottom: 4px; }
+  .tl-title { font-weight: 700; margin-bottom: 4px; }
+  .tl-items { list-style: none; }
+  .tl-items li { font-size: 13px; color: var(--text-muted); margin-bottom: 2px; }
+  .tl-items li::before { content: '→ '; color: var(--green); font-weight: 700; }
+
+  /* ── SUMMARY BOX ── */
+  .summary {
+    background: linear-gradient(135deg, var(--green-light), #F0FDF4);
+    border: 1.5px solid var(--green);
+    border-radius: var(--radius); padding: 20px 24px;
+  }
+  .summary h3 { font-size: 16px; color: var(--green-dark); margin-bottom: 12px; }
+  .summary-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+  .summary-item { background: white; border-radius: 8px; padding: 12px 14px; border: 1px solid rgba(15,124,90,.2); }
+  .summary-item strong { display: block; font-size: 20px; font-weight: 800; color: var(--green); }
+  .summary-item span { font-size: 12px; color: var(--text-muted); }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 3px; }
+
+  @media (max-width: 600px) {
+    .hero { padding: 32px 20px 28px; }
+    .main { padding: 24px 16px 60px; }
+    .arch-flow { flex-direction: column; align-items: flex-start; }
+    .arch-arrow { transform: rotate(90deg); padding: 4px 0; align-self: center; }
+    .widget-row { gap: 12px; }
+    .widget-medium { width: 100%; max-width: 330px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════ HERO ══════════ -->
+<div class="hero">
+  <div class="hero-badge">📋 Development Planning Document</div>
+  <h1>Quran App — UI Fixes, Quotes & Widget</h1>
+  <p>Comprehensive planning for player UI/UX improvements, daily ayah quote notifications, and home screen widget.</p>
+  <div class="hero-meta">
+    <span>📅 June 2026</span>
+    <span>📱 Flutter · iOS · Android</span>
+    <span>🗂 v1.0 → v1.1 + v1.2</span>
+    <span>🟢 3 phases · ~10 sprints</span>
+  </div>
+</div>
+
+<!-- ══════════ NAV ══════════ -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="nav-tab active" href="#player">🎵 Player UI Fixes</a>
+    <a class="nav-tab" href="#ux-flow">🗺 UX Flow Redesign</a>
+    <a class="nav-tab" href="#quotes">✨ Quotes & Notifications</a>
+    <a class="nav-tab" href="#widget">📲 Home Screen Widget</a>
+    <a class="nav-tab" href="#packages">📦 Packages</a>
+    <a class="nav-tab" href="#roadmap">🗓 Roadmap</a>
+  </div>
+</nav>
+
+<div class="main">
+
+<!-- ══════════════════════════════════════════════
+     SECTION 1 — PLAYER UI FIXES
+═══════════════════════════════════════════════════ -->
+<section id="player">
+  <div class="section-title">
+    <div class="section-icon green">🎵</div>
+    Player UI Glitches & UX Audit
+  </div>
+  <p class="section-subtitle">10 identified issues in <code>player_panel.dart</code>, <code>search_screen.dart</code>, and layout system — ordered by severity.</p>
+
+  <div class="bug-grid">
+
+    <!-- BUG 1 -->
+    <div class="bug-item" onclick="toggleBug(this)">
+      <div class="bug-header">
+        <div class="bug-header-left">
+          <span class="bug-num">#1</span>
+          <div>
+            <div class="bug-title">Controls row overflows on narrow phones (≤360 dp)</div>
+            <div class="bug-location">📁 player_panel.dart → _Controls widget</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="badge badge-high">High</span>
+          <span class="bug-chevron">▾</span>
+        </div>
+      </div>
+      <div class="bug-body">
+        <p><strong>Root cause:</strong> The controls row contains 4× ghost buttons (42 dp each), 1× primary button (64 dp), 1× speed chip (~52 dp), and fixed <code>SizedBox</code> spacers totalling ≈64 dp. Minimum row width ≈ <strong>378 dp</strong> — overflows on 360 dp screens.</p>
+        <pre><code><span class="hlc">// ❌ CURRENT — rigid spacers, no flex</span>
+<span class="hlt">Row</span>(
+  mainAxisAlignment: <span class="hln">MainAxisAlignment.center</span>,
+  children: [
+    <span class="hlt">_GhostButton</span>(...),
+    <span class="hlt">SizedBox</span>(width: <span class="hln">8</span>),
+    <span class="hlt">_GhostButton</span>(...),
+    <span class="hlt">SizedBox</span>(width: <span class="hln">16</span>),
+    <span class="hlt">_PrimaryButton</span>(...),          <span class="hlc">// 64 dp</span>
+    <span class="hlt">SizedBox</span>(width: <span class="hln">16</span>),
+    <span class="hlt">_GhostButton</span>(...),
+    <span class="hlt">SizedBox</span>(width: <span class="hln">8</span>),
+    <span class="hlt">_GhostButton</span>(...),
+    <span class="hlt">SizedBox</span>(width: <span class="hln">8</span>),
+    <span class="hlt">_SpeedChip</span>(...),
+  ],
+)</code></pre>
+        <pre><code><span class="hlc">// ✅ FIX — replace rigid spacers with Spacer()</span>
+<span class="hlt">Row</span>(
+  mainAxisAlignment: <span class="hln">MainAxisAlignment.spaceBetween</span>,
+  children: [
+    <span class="hlt">_GhostButton</span>(icon: <span class="hln">Icons.skip_previous_rounded</span>, ...),
+    <span class="hlt">_GhostButton</span>(icon: <span class="hln">Icons.replay_rounded</span>, ...),
+    <span class="hlt">_PrimaryButton</span>(...),
+    <span class="hlt">_GhostButton</span>(icon: <span class="hln">Icons.forward_10_rounded</span>, ...),
+    <span class="hlt">_GhostButton</span>(icon: <span class="hln">Icons.skip_next_rounded</span>, ...),
+    <span class="hlt">_SpeedChip</span>(...),
+  ],
+)</code></pre>
+      </div>
+    </div>
+
+    <!-- BUG 2 -->
+    <div class="bug-item" onclick="toggleBug(this)">
+      <div class="bug-header">
+        <div class="bug-header-left">
+          <span class="bug-num">#2</span>
+          <div>
+            <div class="bug-title">Seek bar drag value not reset on track change</div>
+            <div class="bug-location">📁 player_panel.dart → _SeekBarState._dragValue</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="badge badge-high">High</span>
+          <span class="bug-chevron">▾</span>
+        </div>
+      </div>
+      <div class="bug-body">
+        <p><strong>Root cause:</strong> <code>_dragValue</code> is local state in <code>_SeekBarState</code>. If the user starts dragging and a track switch occurs (prev/next), <code>_dragValue</code> remains non-null. The <code>clamp(0, max)</code> call masks this but if the old drag value exceeds the new track's duration, the displayed position is incorrect until the user releases the seek.</p>
+        <pre><code><span class="hlc">// ✅ FIX — add BlocListener to reset drag on track change</span>
+<span class="hlk">class</span> <span class="hlm">_SeekBarState</span> <span class="hlk">extends</span> <span class="hlm">State</span>&lt;<span class="hlt">_SeekBar</span>&gt; {
+  <span class="hlm">String?</span> _currentTrackId;
+  <span class="hlm">double?</span> _dragValue;
+
+  <span class="hlk">@override</span>
+  <span class="hlm">Widget</span> build(<span class="hlm">BuildContext</span> context) {
+    <span class="hlk">return</span> <span class="hlt">BlocListener</span>&lt;<span class="hlm">PlayerBloc</span>, <span class="hlm">PlayerState</span>&gt;(
+      listenWhen: (prev, curr) => prev.track?.id != curr.track?.id,
+      listener: (_, __) => setState(() {
+        _dragValue = <span class="hln">null</span>;   <span class="hlc">// clear stale drag on track change</span>
+      }),
+      child: <span class="hlt">BlocBuilder</span>(...),  <span class="hlc">// existing seek bar builder</span>
+    );
+  }
+}</code></pre>
+      </div>
+    </div>
+
+    <!-- BUG 3 -->
+    <div class="bug-item" onclick="toggleBug(this)">
+      <div class="bug-header">
+        <div class="bug-header-left">
+          <span class="bug-num">#3</span>
+          <div>
+            <div class="bug-title">SafeArea adds incorrect bottom padding in two-pane layout</div>
+            <div class="bug-location">📁 player_panel.dart → _PanelContent</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="badge badge-medium">Medium</span>
+          <span class="bug-chevron">▾</span>
+        </div>
+      </div>
+      <div class="bug-body">
+        <p><strong>Root cause:</strong> <code>_PanelContent</code> wraps everything in <code>SafeArea(top: false)</code> which adds the home-indicator bottom inset on iPhone. In the two-pane layout, <code>PlayerPanel</code> is rendered inside a <code>Column</code> that occupies the right rail — not the bottom edge of the screen. The SafeArea adds unnecessary whitespace there, making the panel taller than needed.</p>
+        <pre><code><span class="hlc">// ✅ FIX — pass isBottomBar from parent, skip SafeArea in two-pane</span>
+
+<span class="hlk">class</span> <span class="hlm">PlayerPanel</span> <span class="hlk">extends</span> <span class="hlm">StatelessWidget</span> {
+  <span class="hlk">final bool</span> isBottomBar;
+  <span class="hlk">const</span> <span class="hlm">PlayerPanel</span>({<span class="hlk">super</span>.key, <span class="hlk">this</span>.isBottomBar = <span class="hln">true</span>});
+  ...
+}
+
+<span class="hlk">class</span> <span class="hlm">_PanelContent</span> <span class="hlk">extends</span> <span class="hlm">StatelessWidget</span> {
+  <span class="hlk">final bool</span> isBottomBar;
+  ...
+  <span class="hlk">@override</span>
+  <span class="hlm">Widget</span> build(<span class="hlm">BuildContext</span> context) {
+    <span class="hlm">Widget</span> child = <span class="hlt">Padding</span>(...);
+    <span class="hlk">if</span> (isBottomBar) child = <span class="hlt">SafeArea</span>(top: <span class="hln">false</span>, child: child);
+    <span class="hlk">return</span> <span class="hlt">DecoratedBox</span>(decoration: ..., child: child);
+  }
+}</code></pre>
+      </div>
+    </div>
+
+    <!-- BUG 4 -->
+    <div class="bug-item" onclick="toggleBug(this)">
+      <div class="bug-header">
+        <div class="bug-header-left">
+          <span class="bug-num">#4</span>
+          <div>
+            <div class="bug-title">Two-pane _PlayerPane layout jump when track is absent</div>
+            <div class="bug-location">📁 search_screen.dart → _PlayerPane</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="badge badge-medium">Medium</span>
+          <span class="bug-chevron">▾</span>
+        </div>
+      </div>
+      <div class="bug-body">
+        <p><strong>Root cause:</strong> <code>_PlayerPane</code> uses <code>Column(mainAxisAlignment: MainAxisAlignment.end)</code>. When no track is loaded the <code>EmptyStateView</code> shows. When a track is loaded, <code>PlayerPanel</code> replaces it at the bottom with <code>AnimatedSize</code>. The empty state and player fight for vertical space, causing a layout jump on first load.</p>
+        <pre><code><span class="hlc">// ✅ FIX — stack: empty state fills space, panel anchored to bottom</span>
+<span class="hlk">class</span> <span class="hlm">_PlayerPane</span> <span class="hlk">extends</span> <span class="hlm">StatelessWidget</span> {
+  <span class="hlk">const</span> <span class="hlm">_PlayerPane</span>();
+  <span class="hlk">@override</span>
+  <span class="hlm">Widget</span> build(<span class="hlm">BuildContext</span> context) {
+    <span class="hlk">return</span> <span class="hlt">Column</span>(
+      children: [
+        <span class="hlt">Expanded</span>(
+          child: <span class="hlt">BlocSelector</span>&lt;<span class="hlm">PlayerBloc</span>, <span class="hlm">PlayerState</span>, <span class="hlm">bool</span>&gt;(
+            selector: (s) => s.hasTrack,
+            builder: (ctx, hasTrack) => <span class="hlt">AnimatedSwitcher</span>(
+              duration: <span class="hlk">const</span> <span class="hlt">Duration</span>(milliseconds: <span class="hln">300</span>),
+              child: hasTrack
+                ? <span class="hlt">SizedBox.shrink</span>(key: <span class="hlk">const</span> <span class="hlt">ValueKey</span>(<span class="hls">'empty'</span>))
+                : <span class="hlt">EmptyStateView</span>(key: <span class="hlk">const</span> <span class="hlt">ValueKey</span>(<span class="hls">'hint'</span>), ...),
+            ),
+          ),
+        ),
+        <span class="hlt">PlayerPanel</span>(isBottomBar: <span class="hln">false</span>),
+      ],
+    );
+  }
+}</code></pre>
+      </div>
+    </div>
+
+    <!-- BUG 5 -->
+    <div class="bug-item" onclick="toggleBug(this)">
+      <div class="bug-header">
+        <div class="bug-header-left">
+          <span class="bug-num">#5</span>
+          <div>
+            <div class="bug-title">3-digit surah numbers clip inside 52 dp header badge</div>
+            <div class="bug-location">📁 player_panel.dart → _Header container</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="badge badge-medium">Medium</span>
+          <span class="bug-chevron">▾</span>
+        </div>
+      </div>
+      <div class="bug-body">
+        <p><strong>Root cause:</strong> Font size 18 / weight 800 with 3-digit numbers (100–114) renders ~48 dp wide. The container is 52×52 dp with no <code>FittedBox</code>, so the number clips or pushes the container on some devices.</p>
+        <pre><code><span class="hlc">// ✅ FIX — use FittedBox to auto-scale large numbers</span>
+<span class="hlt">Container</span>(
+  width: <span class="hln">52</span>, height: <span class="hln">52</span>,
+  ...
+  child: <span class="hlt">FittedBox</span>(
+    fit: <span class="hln">BoxFit.scaleDown</span>,
+    child: <span class="hlt">Text</span>(
+      <span class="hls">'</span>${track.surah.number}<span class="hls">'</span>,
+      style: <span class="hlt">TextStyle</span>(
+        color: <span class="hln">Colors.white</span>,
+        fontWeight: <span class="hln">FontWeight.w800</span>,
+        fontSize: <span class="hln">18</span>,
+      ),
+    ),
+  ),
+),</code></pre>
+      </div>
+    </div>
+
+    <!-- BUG 6 -->
+    <div class="bug-item" onclick="toggleBug(this)">
+      <div class="bug-header">
+        <div class="bug-header-left">
+          <span class="bug-num">#6</span>
+          <div>
+            <div class="bug-title">Speed chip popup can appear off-screen on small devices</div>
+            <div class="bug-location">📁 player_panel.dart → _SpeedChip.onLongPress</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="badge badge-medium">Medium</span>
+          <span class="bug-chevron">▾</span>
+        </div>
+      </div>
+      <div class="bug-body">
+        <p><strong>Root cause:</strong> The popup's top position is computed as <code>offset.dy - speeds.length * 48.0</code>, which can be negative when the player is near the top of the viewport (e.g., two-pane layout). Flutter's <code>showMenu</code> does not auto-clamp negative positions.</p>
+        <pre><code><span class="hlc">// ✅ FIX — use MediaQuery to clamp popup position</span>
+<span class="hlk">final</span> screen = <span class="hlm">MediaQuery</span>.sizeOf(context);
+<span class="hlk">final</span> menuHeight = speeds.length * <span class="hln">48.0</span>;
+<span class="hlk">final</span> top = (offset.dy - menuHeight)
+    .clamp(<span class="hln">8.0</span>, screen.height - menuHeight - <span class="hln">8.0</span>);
+
+<span class="hlk">await</span> showMenu&lt;<span class="hlm">double</span>&gt;(
+  context: context,
+  position: <span class="hlt">RelativeRect</span>.fromLTRB(
+    offset.dx,
+    top,
+    offset.dx + box.size.width,
+    top + menuHeight,
+  ),
+  items: ...,
+);</code></pre>
+      </div>
+    </div>
+
+    <!-- BUG 7 -->
+    <div class="bug-item" onclick="toggleBug(this)">
+      <div class="bug-header">
+        <div class="bug-header-left">
+          <span class="bug-num">#7</span>
+          <div>
+            <div class="bug-title">Seek bar has no loading indicator while audio is buffering</div>
+            <div class="bug-location">📁 player_panel.dart → _SeekBar</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="badge badge-medium">Medium</span>
+          <span class="bug-chevron">▾</span>
+        </div>
+      </div>
+      <div class="bug-body">
+        <p><strong>Root cause:</strong> When <code>status == loading</code> the slider is disabled (correct) and shows max=1.0. There is no shimmer or linear progress indicator that tells the user the track is loading. The only feedback is the spinning play button in <code>_PrimaryButton</code> which is visually small.</p>
+        <pre><code><span class="hlc">// ✅ FIX — show LinearProgressIndicator while loading</span>
+<span class="hlt">Column</span>(children: [
+  <span class="hlt">SliderTheme</span>(..., child: <span class="hlt">Slider</span>(...)),
+  <span class="hlk">if</span> (state.status == <span class="hln">PlaybackStatus.loading</span>)
+    <span class="hlt">ClipRRect</span>(
+      borderRadius: <span class="hlt">BorderRadius</span>.circular(<span class="hln">999</span>),
+      child: <span class="hlt">LinearProgressIndicator</span>(
+        minHeight: <span class="hln">2</span>,
+        color: <span class="hln">Colors.white</span>,
+        backgroundColor: <span class="hln">Colors.white</span>.withValues(alpha: <span class="hln">0.25</span>),
+      ),
+    )
+  <span class="hlk">else</span>
+    <span class="hlt">SizedBox</span>(height: <span class="hln">2</span>),    <span class="hlc">// preserve height</span>
+  <span class="hlt">Padding</span>(...)               <span class="hlc">// time labels</span>
+])</code></pre>
+      </div>
+    </div>
+
+    <!-- BUG 8 -->
+    <div class="bug-item" onclick="toggleBug(this)">
+      <div class="bug-header">
+        <div class="bug-header-left">
+          <span class="bug-num">#8</span>
+          <div>
+            <div class="bug-title">No RepaintBoundary isolating seek bar from static controls</div>
+            <div class="bug-location">📁 player_panel.dart → _PanelContent</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="badge badge-low">Low</span>
+          <span class="bug-chevron">▾</span>
+        </div>
+      </div>
+      <div class="bug-body">
+        <p><strong>Root cause:</strong> <code>_SeekBar</code> rebuilds ~4 Hz from the position stream. Without a <code>RepaintBoundary</code>, the GPU composites _Header, _SeekBar, and _Controls together each tick — wasted work since header and controls are visually static during playback.</p>
+        <pre><code><span class="hlc">// ✅ FIX — wrap _SeekBar in RepaintBoundary</span>
+<span class="hlt">Column</span>(children: [
+  <span class="hlt">_Header</span>(),
+  <span class="hlt">SizedBox</span>(height: <span class="hln">12</span>),
+  <span class="hlt">RepaintBoundary</span>(child: <span class="hlt">_SeekBar</span>()),  <span class="hlc">// ← isolate repaints</span>
+  <span class="hlt">SizedBox</span>(height: <span class="hln">4</span>),
+  <span class="hlt">_Controls</span>(),
+])</code></pre>
+      </div>
+    </div>
+
+    <!-- BUG 9 -->
+    <div class="bug-item" onclick="toggleBug(this)">
+      <div class="bug-header">
+        <div class="bug-header-left">
+          <span class="bug-num">#9</span>
+          <div>
+            <div class="bug-title">Panel corner radius inconsistent between single/two-pane layouts</div>
+            <div class="bug-location">📁 player_panel.dart → _PanelContent decoration</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="badge badge-low">Low</span>
+          <span class="bug-chevron">▾</span>
+        </div>
+      </div>
+      <div class="bug-body">
+        <p><strong>Root cause:</strong> <code>_PanelContent</code> always applies <code>BorderRadius.vertical(top: Radius.circular(24))</code>. In single-pane (bottom panel) this makes sense. In two-pane, the panel is in the right column mid-screen, so top-only rounded corners look visually unbalanced.</p>
+        <pre><code><span class="hlc">// ✅ FIX — pass borderRadius based on layout</span>
+<span class="hlt">DecoratedBox</span>(
+  decoration: <span class="hlt">BoxDecoration</span>(
+    gradient: <span class="hln">AppColors.brandGradient</span>,
+    borderRadius: isBottomBar
+      ? <span class="hlt">BorderRadius</span>.vertical(top: <span class="hlt">Radius</span>.circular(<span class="hln">24</span>))
+      : <span class="hlt">BorderRadius</span>.circular(<span class="hln">20</span>),   <span class="hlc">// all-round in two-pane</span>
+  ),
+  child: ...,
+)</code></pre>
+      </div>
+    </div>
+
+    <!-- BUG 10 -->
+    <div class="bug-item" onclick="toggleBug(this)">
+      <div class="bug-header">
+        <div class="bug-header-left">
+          <span class="bug-num">#10</span>
+          <div>
+            <div class="bug-title">Error message overlap with track artist text in narrow layouts</div>
+            <div class="bug-location">📁 player_panel.dart → _Header → error Text</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="badge badge-low">Low</span>
+          <span class="bug-chevron">▾</span>
+        </div>
+      </div>
+      <div class="bug-body">
+        <p><strong>Root cause:</strong> The error text is appended inside the same <code>Column</code> as the surah name and artist. When both are long and the error message is 2 lines, the header <code>Row</code> can grow past the container height causing layout overflow on phones with large text scaling (up to ×1.30 as per <code>app.dart</code>).</p>
+        <pre><code><span class="hlc">// ✅ FIX — replace error Column entry with AnimatedSwitcher banner</span>
+<span class="hlt">AnimatedSize</span>(
+  duration: <span class="hlk">const</span> <span class="hlt">Duration</span>(milliseconds: <span class="hln">200</span>),
+  child: vm.isError
+    ? <span class="hlt">Container</span>(
+        width: double.infinity,
+        margin: <span class="hlk">const</span> <span class="hlt">EdgeInsets</span>.only(top: <span class="hln">8</span>),
+        padding: <span class="hlk">const</span> <span class="hlt">EdgeInsets</span>.symmetric(horizontal: <span class="hln">10</span>, vertical: <span class="hln">6</span>),
+        decoration: <span class="hlt">BoxDecoration</span>(
+          color: <span class="hln">Colors.red</span>.withValues(alpha: <span class="hln">0.25</span>),
+          borderRadius: <span class="hlt">BorderRadius</span>.circular(<span class="hln">8</span>),
+        ),
+        child: <span class="hlt">Text</span>(vm.errorMessage!, ...),
+      )
+    : <span class="hlt">SizedBox.shrink</span>(),
+)</code></pre>
+      </div>
+    </div>
+
+  </div><!-- /bug-grid -->
+</section>
+
+
+<!-- ══════════════════════════════════════════════
+     SECTION 1B — UX FLOW REDESIGN
+═══════════════════════════════════════════════════ -->
+<section id="ux-flow">
+  <div class="section-title">
+    <div class="section-icon gold">🗺</div>
+    UX Flow Redesign
+  </div>
+  <p class="section-subtitle">Additional UX problems beyond visual glitches — the core navigation and interaction model needs rethinking.</p>
+
+  <!-- ── UX PROBLEM OVERVIEW ── -->
+  <div class="card">
+    <div class="card-title">⚠️ Current Flow vs. Expected Flow</div>
+    <table>
+      <tr><th>Touchpoint</th><th>Current Behaviour</th><th>Problem</th><th>Expected Behaviour</th></tr>
+      <tr>
+        <td>Tap surah tile</td>
+        <td>If reciter already selected → <strong>immediately plays</strong></td>
+        <td>User may want to read, not play. Aggressive.</td>
+        <td>Navigate to <strong>SurahDetailPage</strong></td>
+      </tr>
+      <tr>
+        <td>Tap surah (no reciter)</td>
+        <td>Shows reciter picker bottom sheet</td>
+        <td>The picker is hidden — most users won't long-press to change reciter</td>
+        <td>Always show reciter chip / selector on detail page</td>
+      </tr>
+      <tr>
+        <td>Long-press surah</td>
+        <td>Opens reciter picker</td>
+        <td>Undiscoverable gesture. No tooltip, no hint.</td>
+        <td>Reciter selector always visible on detail page header</td>
+      </tr>
+      <tr>
+        <td>Audio loading state</td>
+        <td>Panel appears at bottom with spinning primary button</td>
+        <td>No explanation of what is loading, feels like a freeze</td>
+        <td>Skeleton / shimmer on player in detail page + clear status text</td>
+      </tr>
+      <tr>
+        <td>Close player</td>
+        <td>Tapping ✕ <strong>stops playback entirely</strong></td>
+        <td>User might want to dismiss panel but keep listening (mini-player)</td>
+        <td>Collapse to persistent mini-player bar; separate stop button</td>
+      </tr>
+      <tr>
+        <td>Reciter visibility</td>
+        <td>No indication of current reciter on surah tiles</td>
+        <td>User doesn't know which reciter will play</td>
+        <td>Show selected reciter name in header / chip on detail page</td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- ── NEW NAVIGATION MODEL ── -->
+  <h3 style="font-size:16px;font-weight:800;margin:24px 0 12px">📐 New Navigation Architecture</h3>
+  <div class="arch">
+    <div class="arch-title">Before (current) — single-screen, tap = play</div>
+    <div class="arch-flow">
+      <div class="arch-node gray">SearchScreen<br/><small>surah list</small></div>
+      <div class="arch-arrow">→ tap</div>
+      <div class="arch-node" style="background:#FEE2E2;border-color:#F87171;color:#7F1D1D">Play immediately<br/><small>⚠ no confirmation</small></div>
+      <div class="arch-arrow">+</div>
+      <div class="arch-node gray">PlayerPanel<br/><small>bottom panel</small></div>
+    </div>
+  </div>
+  <div class="arch">
+    <div class="arch-title">After (proposed) — tap navigates, play is intentional</div>
+    <div class="arch-flow">
+      <div class="arch-node">SearchScreen<br/><small>surah list</small></div>
+      <div class="arch-arrow">→ tap</div>
+      <div class="arch-node gold">SurahDetailPage<br/><small>ayah list + header</small></div>
+      <div class="arch-arrow">→ tap Play</div>
+      <div class="arch-node">Embedded Player<br/><small>in detail page</small></div>
+      <div class="arch-arrow">→ back</div>
+      <div class="arch-node blue">MiniPlayerBar<br/><small>persistent across screens</small></div>
+    </div>
+  </div>
+
+  <!-- ── SURAH DETAIL PAGE SPEC ── -->
+  <h3 style="font-size:16px;font-weight:800;margin:24px 0 12px">📄 SurahDetailPage — Feature Spec</h3>
+
+  <!-- visual mockup using CSS -->
+  <div style="max-width:360px;margin:0 auto 24px;background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.12);border:1px solid #e5e7eb;">
+    <!-- header -->
+    <div style="background:linear-gradient(135deg,#0F7C5A,#0A4D38);padding:20px 20px 16px;color:white;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+        <div style="background:rgba(255,255,255,.18);border-radius:12px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;">2</div>
+        <div>
+          <div style="font-weight:800;font-size:17px;">Al-Baqarah</div>
+          <div style="font-size:12px;opacity:.75;">The Cow · 286 ayahs · Medinan</div>
+        </div>
+        <div style="margin-left:auto;font-size:20px;font-family:serif;">البقرة</div>
+      </div>
+      <!-- reciter chip -->
+      <div style="display:flex;gap:8px;align-items:center;">
+        <div style="background:rgba(255,255,255,.18);border-radius:999px;padding:5px 12px;font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px;">
+          🎙 Mishary Alafasy <span style="opacity:.6;margin-left:4px;">▾</span>
+        </div>
+        <div style="background:rgba(255,255,255,.25);border-radius:999px;padding:5px 14px;font-size:12px;font-weight:700;">▶ Play</div>
+      </div>
+    </div>
+    <!-- embedded player (loading state) -->
+    <div style="background:#F0FDF4;border-bottom:1px solid #BBF7D0;padding:12px 16px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:36px;height:36px;border-radius:50%;background:#0F7C5A;display:flex;align-items:center;justify-content:center;color:white;font-size:14px;">⏸</div>
+        <div style="flex:1;">
+          <div style="height:4px;background:#BBF7D0;border-radius:2px;margin-bottom:5px;"><div style="width:35%;height:100%;background:#0F7C5A;border-radius:2px;"></div></div>
+          <div style="display:flex;justify-content:space-between;font-size:10px;color:#6B7280;">
+            <span>12:34</span><span>35:10</span>
+          </div>
+        </div>
+        <div style="font-size:11px;font-weight:700;color:#0F7C5A;background:#DCFCE7;border-radius:999px;padding:3px 10px;">1.0×</div>
+      </div>
+    </div>
+    <!-- ayah list sample -->
+    <div style="padding:16px;">
+      <div style="text-align:right;direction:rtl;font-family:serif;font-size:20px;line-height:2;margin-bottom:8px;color:#111;">
+        بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ
+      </div>
+      <div style="font-size:12px;color:#6B7280;margin-bottom:14px;">In the name of Allah, the Entirely Merciful, the Especially Merciful.</div>
+      <div style="height:1px;background:#f0f0f0;margin-bottom:12px;"></div>
+      <div style="text-align:right;direction:rtl;font-family:serif;font-size:19px;line-height:2;color:#111;background:#F0FDF4;border-radius:8px;padding:8px 10px;">
+        ذَٰلِكَ ٱلۡكِتَٰبُ لَا رَيۡبَۛ فِيهِ
+      </div>
+      <div style="font-size:12px;color:#6B7280;margin-top:6px;">This is the Book about which there is no doubt...</div>
+    </div>
+  </div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-body">
+        <div class="step-title">Create SurahDetailPage</div>
+        <div class="step-desc">New file: <code>lib/features/surah/view/surah_detail_page.dart</code>. Full-page <code>Scaffold</code> with a gradient hero header (surah name, number, Arabic name, ayah count, revelation type), reciter selector chip, embedded player, and scrollable ayah list. Replaces the <code>AyahView</code> bottom sheet for primary reading.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <div class="step-title">Change SurahTile tap → navigate instead of play</div>
+        <div class="step-desc">In <code>search_screen.dart</code>, change <code>onTap</code> to push <code>SurahDetailPage</code> via <code>Navigator.push()</code>. Remove the immediate <code>PlayerTrackSelected</code> dispatch. Play is now only triggered when the user explicitly taps the Play button in the detail page header. Keep the surah tiles' active/playing visual indicator via <code>PlayerBloc</code>.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <div class="step-title">Embed reciter selector in detail page header</div>
+        <div class="step-desc">Show the currently selected reciter as a tappable chip in the surah hero header. Tapping opens the <code>ReciterPicker</code> bottom sheet. The selected reciter is sourced from <code>SearchBloc.state.selectedReciter</code> and always visible — no hidden long-press required.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <div class="step-title">Embed player panel inside detail page (not bottom overlay)</div>
+        <div class="step-desc">The player controls live in a sticky section at the top of the detail page (below the hero header), not as a floating overlay. This eliminates the "panel covers content" problem. The player is always contextually tied to the surah being viewed. Use <code>SliverAppBar</code> with the player pinned.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <div class="step-title">Improve loading state — skeleton + status text</div>
+        <div class="step-desc">When <code>PlayerState.status == loading</code>, show a shimmer skeleton on the seek bar, disable seek + speed controls, and show a "<em>Loading audio…</em>" text label. On error, show an inline error banner with a retry button inside the player section — not just a red error message under the track title.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <div class="step-title">Add persistent MiniPlayerBar on SearchScreen</div>
+        <div class="step-desc">Rename the current <code>PlayerPanel</code> into a compact <code>MiniPlayerBar</code> that shows: current surah name, play/pause button, and a progress pill. The ✕ button only collapses the bar (hides it) but does <em>not</em> stop playback. Add a separate Stop action inside the detail page. The mini bar appears at the bottom of <code>SearchScreen</code> whenever a track is active.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <div class="step-title">Auto-scroll ayah list to active verse</div>
+        <div class="step-desc">Using the position stream from <code>PlayerBloc</code> and ayah duration data, highlight and auto-scroll to the currently playing ayah. This requires either a verse-by-verse audio edition or an offset map (surah total duration / ayah count). Start with proportional approximation, upgrade later to verse-by-verse API.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COMPLETE UX AUDIT TABLE -->
+  <h3 style="font-size:16px;font-weight:800;margin:28px 0 12px">🔍 Full UX Audit — All Issues</h3>
+  <table>
+    <tr><th>#</th><th>Issue</th><th>Severity</th><th>Fix</th></tr>
+    <tr>
+      <td>U1</td>
+      <td>Tap surah immediately plays without user intent</td>
+      <td><span class="badge badge-high">Critical</span></td>
+      <td>Navigate to SurahDetailPage, play is opt-in</td>
+    </tr>
+    <tr>
+      <td>U2</td>
+      <td>Reciter picker hidden behind long-press (undiscoverable)</td>
+      <td><span class="badge badge-high">High</span></td>
+      <td>Always-visible reciter chip in detail page header</td>
+    </tr>
+    <tr>
+      <td>U3</td>
+      <td>Close button (✕) stops playback — user loses audio</td>
+      <td><span class="badge badge-high">High</span></td>
+      <td>✕ collapses panel only; MiniPlayerBar persists audio</td>
+    </tr>
+    <tr>
+      <td>U4</td>
+      <td>Audio loading gives no feedback beyond spinning icon</td>
+      <td><span class="badge badge-medium">Medium</span></td>
+      <td>Shimmer seek bar + "Loading audio…" text + retry on error</td>
+    </tr>
+    <tr>
+      <td>U5</td>
+      <td>No selected reciter shown on surah list tiles</td>
+      <td><span class="badge badge-medium">Medium</span></td>
+      <td>Show reciter name in SearchScreen header / detail page</td>
+    </tr>
+    <tr>
+      <td>U6</td>
+      <td>Bottom player panel overlaps last list items</td>
+      <td><span class="badge badge-medium">Medium</span></td>
+      <td>Move player into detail page; mini bar on list screen</td>
+    </tr>
+    <tr>
+      <td>U7</td>
+      <td>Reading (AyahView) and playing are two separate flows, disconnected</td>
+      <td><span class="badge badge-medium">Medium</span></td>
+      <td>SurahDetailPage unifies reading + playing on one screen</td>
+    </tr>
+    <tr>
+      <td>U8</td>
+      <td>No visual confirmation when bookmark is saved (just a SnackBar)</td>
+      <td><span class="badge badge-low">Low</span></td>
+      <td>Replace SnackBar with inline icon animation on bookmark button</td>
+    </tr>
+    <tr>
+      <td>U9</td>
+      <td>Speed chip is far right, hard to reach on larger phones</td>
+      <td><span class="badge badge-low">Low</span></td>
+      <td>Move speed chip to inline with seek bar labels (right side)</td>
+    </tr>
+    <tr>
+      <td>U10</td>
+      <td>Replay button (⟲) resets to 0:00 — many users expect previous-track</td>
+      <td><span class="badge badge-low">Low</span></td>
+      <td>Change to replay_10 (−10 s) or add tooltip explaining reset behavior</td>
+    </tr>
+  </table>
+
+  <!-- BEFORE/AFTER FLOW COMPARISON -->
+  <h3 style="font-size:16px;font-weight:800;margin:28px 0 12px">🔄 Before / After User Flow</h3>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+    <div class="card" style="border-color:#FCA5A5;">
+      <div class="card-title" style="color:#B91C1C;">❌ Current Flow</div>
+      <ol style="font-size:13px;color:var(--text-muted);padding-left:18px;line-height:2;">
+        <li>User sees surah list</li>
+        <li>Taps "Al-Baqarah"</li>
+        <li>Audio starts immediately</li>
+        <li>User wanted to read, not play</li>
+        <li>Has to find ✕ to stop</li>
+        <li>✕ stops audio entirely</li>
+        <li>User confused</li>
+      </ol>
+    </div>
+    <div class="card" style="border-color:#86EFAC;">
+      <div class="card-title" style="color:#15803D;">✅ Proposed Flow</div>
+      <ol style="font-size:13px;color:var(--text-muted);padding-left:18px;line-height:2;">
+        <li>User sees surah list</li>
+        <li>Taps "Al-Baqarah"</li>
+        <li>Navigates to SurahDetailPage</li>
+        <li>User reads ayahs freely</li>
+        <li>Taps ▶ Play to start audio</li>
+        <li>Goes back → MiniBar keeps playing</li>
+        <li>User is in control</li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+
+<!-- ══════════════════════════════════════════════
+     SECTION 2 — QUOTES & NOTIFICATIONS
+═══════════════════════════════════════════════════ -->
+<section id="quotes">
+  <div class="section-title">
+    <div class="section-icon gold">✨</div>
+    Random Ayah Quotes + Notifications
+  </div>
+  <p class="section-subtitle">Daily reminders featuring a random verse, with rich notification preview and in-app quote card.</p>
+
+  <!-- MOCKUPS -->
+  <div class="quote-mockup">
+    <div class="quote-surah-badge">
+      <span>📖</span> Al-Baqarah • Ayah 286
+    </div>
+    <div class="quote-arabic">
+      لَا يُكَلِّفُ ٱللَّهُ نَفۡسًا إِلَّا وُسۡعَهَا
+    </div>
+    <div class="quote-translation">
+      "Allah does not burden a soul beyond that it can bear."
+    </div>
+    <div class="quote-footer">
+      <span>📿 Daily Reminder</span>
+      <span>Tap to read full surah →</span>
+    </div>
+  </div>
+
+  <div class="notif-mockup">
+    <div class="notif-header">
+      <div class="notif-app-icon">☪</div>
+      <div class="notif-app-name">Quran App</div>
+      <div class="notif-time">now</div>
+    </div>
+    <div class="notif-title">📿 Daily Ayah Reminder</div>
+    <div class="notif-body">Al-Imran • Ayah 173 — "Allah is sufficient for us, and He is the best disposer of affairs."</div>
+    <div class="notif-arabic">حَسۡبُنَا ٱللَّهُ وَنِعۡمَ ٱلۡوَكِيلُ</div>
+  </div>
+
+  <!-- ARCHITECTURE -->
+  <div class="arch">
+    <div class="arch-title">Feature Architecture</div>
+    <div class="arch-flow">
+      <div class="arch-node">QuoteService<br/><small>random ayah picker</small></div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-node">QuoteBloc<br/><small>state management</small></div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-node gold">NotificationService<br/><small>schedule / dispatch</small></div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-node blue">QuoteCard<br/><small>UI preview widget</small></div>
+    </div>
+    <br/>
+    <div class="arch-flow">
+      <div class="arch-node gray">IAyahRepository<br/><small>(existing)</small></div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-node">QuoteService<br/><small>picks random ayah</small></div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-node">SharedPreferences<br/><small>saves daily quote</small></div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-node gold">flutter_local_<br/>notifications</div>
+    </div>
+  </div>
+
+  <!-- IMPLEMENTATION STEPS -->
+  <h3 style="font-size:16px;font-weight:800;margin-bottom:16px">📋 Implementation Steps</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-body">
+        <div class="step-title">Create QuoteService</div>
+        <div class="step-desc">New file: <code>lib/data/services/quote_service.dart</code>. Uses existing <code>IAyahRepository</code> to fetch a surah, picks a random ayah, and persists it to <code>SharedPreferences</code> as JSON (<code>QuoteModel</code>) so it survives app restarts and is readable by the native widget.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <div class="step-title">Add QuoteModel</div>
+        <div class="step-desc">New file: <code>lib/data/models/quote.dart</code>. Fields: <code>surahNumber</code>, <code>surahEnglishName</code>, <code>surahArabicName</code>, <code>ayahNumber</code>, <code>arabicText</code>, <code>translation</code>, <code>generatedAt</code>. Serializable to JSON for SharedPreferences + native widget.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <div class="step-title">Create NotificationService</div>
+        <div class="step-desc">New file: <code>lib/data/services/notification_service.dart</code>. Wraps <code>flutter_local_notifications</code>. Methods: <code>initialize()</code>, <code>scheduleDaily(hour, minute)</code>, <code>scheduleTimes(List&lt;TimeOfDay&gt;)</code>, <code>cancelAll()</code>, <code>showImmediate(QuoteModel)</code>.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <div class="step-title">Create QuoteBloc</div>
+        <div class="step-desc">New file: <code>lib/features/quote/bloc/quote_bloc.dart</code>. Events: <code>QuoteLoadRequested</code>, <code>QuoteRefreshRequested</code>, <code>QuoteScheduleChanged</code>. State fields: <code>quote</code>, <code>status</code>, <code>schedule</code> (enum: off / morning / evening / 3x / custom), <code>customTimes</code>.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <div class="step-title">Build QuoteCard widget</div>
+        <div class="step-desc">New file: <code>lib/features/quote/view/quote_card.dart</code>. Full-width card with gradient background, Arabic text (Scheherazade New font), translation, surah/ayah badge, "Read Surah" and "Share" actions. Accessible via a dedicated button in SearchHeader or Settings.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <div class="step-title">Add Notification Settings section</div>
+        <div class="step-desc">Extend <code>lib/features/settings/view/settings_screen.dart</code> with a new "Daily Reminders" section. Toggle to enable/disable, schedule picker (Morning 7am / Evening 7pm / 3× day / Custom), and a "Preview quote" button that calls <code>NotificationService.showImmediate()</code>.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <div class="step-title">Handle notification tap → deep link</div>
+        <div class="step-desc">In <code>main.dart</code> / <code>app.dart</code>, handle <code>onDidReceiveNotificationResponse</code> to extract the payload (surah number) and call <code>AyahView.show()</code> or navigate to the quote card. Register <code>NotificationService.initialize()</code> before <code>runApp()</code>.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <div class="step-title">Request & handle permissions</div>
+        <div class="step-desc">iOS requires <code>requestPermissions()</code> on first launch. Android 13+ requires <code>POST_NOTIFICATIONS</code> permission. Show a rationale dialog before requesting. Store permission state in <code>AppSettings</code> via <code>SettingsBloc</code>.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DATA MODEL -->
+  <h3 style="font-size:16px;font-weight:800;margin:24px 0 12px">📐 QuoteModel + Schedule Config</h3>
+  <pre><code><span class="hlc">// lib/data/models/quote.dart</span>
+<span class="hlk">class</span> <span class="hlm">QuoteModel</span> {
+  <span class="hlk">final int</span>    surahNumber;
+  <span class="hlk">final</span> <span class="hlm">String</span> surahEnglishName;
+  <span class="hlk">final</span> <span class="hlm">String</span> surahArabicName;
+  <span class="hlk">final int</span>    ayahNumber;
+  <span class="hlk">final</span> <span class="hlm">String</span> arabicText;
+  <span class="hlk">final</span> <span class="hlm">String</span>? translation;
+  <span class="hlk">final</span> <span class="hlm">DateTime</span> generatedAt;
+
+  <span class="hlt">Map</span>&lt;<span class="hlm">String</span>, <span class="hlm">dynamic</span>&gt; toJson() =&gt; {
+    <span class="hls">'surahNumber'</span>: surahNumber,
+    <span class="hls">'surahEnglishName'</span>: surahEnglishName,
+    <span class="hls">'surahArabicName'</span>: surahArabicName,
+    <span class="hls">'ayahNumber'</span>: ayahNumber,
+    <span class="hls">'arabicText'</span>: arabicText,
+    <span class="hls">'translation'</span>: translation,
+    <span class="hls">'generatedAt'</span>: generatedAt.toIso8601String(),
+  };
+}
+
+<span class="hlk">enum</span> <span class="hlm">QuoteSchedule</span> {
+  off,
+  morning,    <span class="hlc">// 07:00</span>
+  evening,    <span class="hlc">// 19:00</span>
+  threeDaily, <span class="hlc">// 07:00, 13:00, 19:00</span>
+  custom,
+}</code></pre>
+
+  <!-- SCHEDULE OPTIONS TABLE -->
+  <h3 style="font-size:16px;font-weight:800;margin:24px 0 12px">⏰ Notification Schedule Options</h3>
+  <table>
+    <tr><th>Option</th><th>Times</th><th>Notifications/day</th><th>Unique quote?</th></tr>
+    <tr><td>Off</td><td>—</td><td>0</td><td>—</td></tr>
+    <tr><td>Morning</td><td>07:00</td><td>1</td><td>New daily</td></tr>
+    <tr><td>Evening</td><td>19:00</td><td>1</td><td>New daily</td></tr>
+    <tr><td>3× Day</td><td>07:00, 13:00, 19:00</td><td>3</td><td>3 unique/day</td></tr>
+    <tr><td>Custom</td><td>User picks up to 5 times</td><td>1–5</td><td>Each unique</td></tr>
+  </table>
+</section>
+
+
+<!-- ══════════════════════════════════════════════
+     SECTION 3 — HOME SCREEN WIDGET
+═══════════════════════════════════════════════════ -->
+<section id="widget">
+  <div class="section-title">
+    <div class="section-icon blue">📲</div>
+    Home Screen Widget
+  </div>
+  <p class="section-subtitle">iOS WidgetKit + Android Glance widget showing the daily quote and now-playing info, powered by the <code>home_widget</code> package.</p>
+
+  <!-- WIDGET MOCKUPS -->
+  <div class="widget-row">
+    <div class="widget-small">
+      <div class="widget-label">☪ Quran · Daily Verse</div>
+      <div class="widget-verse-ar">وَمَن يَتَوَكَّلۡ عَلَى ٱللَّهِ فَهُوَ حَسۡبُهُۥ</div>
+      <div class="widget-surah">At-Talaq • 65:3</div>
+    </div>
+    <div class="widget-medium">
+      <div class="widget-medium-left">
+        <div class="widget-label">☪ Daily Verse</div>
+        <div class="widget-verse-ar">وَمَن يَتَوَكَّلۡ عَلَى ٱللَّهِ فَهُوَ حَسۡبُهُۥ</div>
+        <div class="widget-verse-tr">"And whoever relies upon Allah — then He is sufficient for him."</div>
+        <div class="widget-surah">At-Talaq • Ayah 3</div>
+      </div>
+      <div class="widget-medium-right">
+        <div style="font-size:26px;opacity:.8">☪</div>
+        <div class="widget-play-btn">▶</div>
+        <div style="font-size:9px;opacity:.6;text-align:center">Listen</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ARCHITECTURE -->
+  <div class="arch">
+    <div class="arch-title">Widget Data Flow</div>
+    <div class="arch-flow">
+      <div class="arch-node">QuoteService<br/><small>generates daily quote</small></div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-node">HomeWidget.saveWidgetData()<br/><small>writes to shared storage</small></div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-node gold">HomeWidget.updateWidget()<br/><small>triggers OS refresh</small></div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-node blue">Native Widget<br/><small>iOS Swift / Android Kotlin</small></div>
+    </div>
+  </div>
+
+  <!-- IMPL STEPS -->
+  <h3 style="font-size:16px;font-weight:800;margin:0 0 16px">📋 Implementation Steps</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-body">
+        <div class="step-title">Add home_widget package</div>
+        <div class="step-desc">Add <code>home_widget: ^0.6.0</code> to <code>pubspec.yaml</code>. This bridges Flutter ↔ native with a shared <code>UserDefaults</code> (iOS) / <code>SharedPreferences</code> (Android) storage group. No platform channel boilerplate needed.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <div class="step-title">Create WidgetDataService</div>
+        <div class="step-desc">New file: <code>lib/data/services/widget_data_service.dart</code>. Calls <code>HomeWidget.saveWidgetData()</code> for keys: <code>quote_arabic</code>, <code>quote_translation</code>, <code>quote_surah</code>, <code>quote_ayah_num</code>, <code>now_playing_surah</code>. Then calls <code>HomeWidget.updateWidget()</code>.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <div class="step-title">iOS — Create WidgetKit extension (Swift)</div>
+        <div class="step-desc">In Xcode: File → New Target → Widget Extension. Name: <code>QuranWidget</code>. Reads shared <code>UserDefaults</code> (App Group: <code>group.com.yourcompany.quran</code>). Implement Small and Medium widget families. Use SwiftUI <code>Text</code> with Arabic locale for RTL rendering.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <div class="step-title">Android — Create Glance AppWidget (Kotlin)</div>
+        <div class="step-desc">Create <code>android/app/src/main/kotlin/…/QuranWidget.kt</code> extending <code>GlanceAppWidget</code>. Reads data from <code>HomeWidgetPlugin.getData()</code>. Define <code>QuranWidgetReceiver</code>, register in <code>AndroidManifest.xml</code> with <code>&lt;receiver&gt;</code> and widget XML layout metadata.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <div class="step-title">Wire background refresh</div>
+        <div class="step-desc">Register <code>HomeWidget.registerBackgroundCallback(backgroundCallback)</code> in <code>main.dart</code>. The <code>backgroundCallback</code> is a top-level function that calls <code>QuoteService.getOrRefreshDailyQuote()</code> and <code>WidgetDataService.push()</code>. iOS uses Background App Refresh; Android uses WorkManager via the plugin.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <div class="step-title">Handle widget tap → deep link</div>
+        <div class="step-desc">iOS: Set <code>Link</code> in SwiftUI view to <code>quran://quote</code>. Android: Set <code>android:onClick</code> to launch the app with action extra. Flutter side: handle <code>HomeWidget.widgetClicked</code> stream to navigate to the <code>QuoteCard</code> or the surah's ayah view.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <div class="step-title">Update widget on quote change</div>
+        <div class="step-desc">Trigger <code>WidgetDataService.push()</code> from <code>QuoteBloc</code> whenever a new quote is generated (midnight refresh or manual refresh in Settings). Also update the now-playing fields from <code>PlayerBloc</code> when a track starts playing.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- WIDGET SIZES TABLE -->
+  <h3 style="font-size:16px;font-weight:800;margin:24px 0 12px">📐 Widget Variants</h3>
+  <table>
+    <tr><th>Size</th><th>iOS Family</th><th>Android Size</th><th>Content</th></tr>
+    <tr>
+      <td><strong>Small</strong></td><td>systemSmall</td><td>2×2 cells</td>
+      <td>App icon, Arabic verse text, surah + ayah number</td>
+    </tr>
+    <tr>
+      <td><strong>Medium</strong></td><td>systemMedium</td><td>4×2 cells</td>
+      <td>+ Translation text, Listen button (opens app)</td>
+    </tr>
+    <tr>
+      <td><strong>Large</strong></td><td>systemLarge</td><td>4×4 cells</td>
+      <td>+ Full surah name, Meccan/Medinan tag, Refresh button</td>
+    </tr>
+    <tr>
+      <td><strong>Lock Screen</strong></td><td>accessoryRectangular</td><td>N/A</td>
+      <td>Short translation (2 lines max)</td>
+    </tr>
+  </table>
+
+  <!-- SHARED STORAGE KEYS -->
+  <h3 style="font-size:16px;font-weight:800;margin:24px 0 12px">🗝 Shared Storage Keys</h3>
+  <pre><code><span class="hlc">// lib/data/services/widget_data_service.dart</span>
+<span class="hlk">class</span> <span class="hlm">WidgetDataService</span> {
+  <span class="hlk">static const</span> <span class="hlm">String</span> _appGroupId = <span class="hls">'group.com.yourcompany.quran'</span>;
+  <span class="hlk">static const</span> _androidName = <span class="hls">'QuranWidget'</span>;
+  <span class="hlk">static const</span> _iosKind    = <span class="hls">'QuranWidget'</span>;
+
+  <span class="hlk">Future</span>&lt;<span class="hlk">void</span>&gt; push(<span class="hlm">QuoteModel</span> quote, [<span class="hlm">Track</span>? nowPlaying]) <span class="hlk">async</span> {
+    <span class="hlk">await</span> <span class="hlm">Future</span>.wait([
+      <span class="hlt">HomeWidget</span>.saveWidgetData(<span class="hls">'quote_arabic'</span>,      quote.arabicText),
+      <span class="hlt">HomeWidget</span>.saveWidgetData(<span class="hls">'quote_translation'</span>, quote.translation ?? <span class="hls">''</span>),
+      <span class="hlt">HomeWidget</span>.saveWidgetData(<span class="hls">'quote_surah'</span>,       quote.surahEnglishName),
+      <span class="hlt">HomeWidget</span>.saveWidgetData(<span class="hls">'quote_ayah_num'</span>,    quote.ayahNumber),
+      <span class="hlt">HomeWidget</span>.saveWidgetData(<span class="hls">'now_playing_surah'</span>, nowPlaying?.surah.englishName ?? <span class="hls">''</span>),
+    ]);
+    <span class="hlk">await</span> <span class="hlt">HomeWidget</span>.updateWidget(
+      androidName: _androidName,
+      iOSName:     _iosKind,
+      qualifiedAndroidName: <span class="hls">'com.yourcompany.quran.QuranWidgetReceiver'</span>,
+    );
+  }
+}</code></pre>
+</section>
+
+
+<!-- ══════════════════════════════════════════════
+     SECTION 4 — PACKAGES
+═══════════════════════════════════════════════════ -->
+<section id="packages">
+  <div class="section-title">
+    <div class="section-icon green">📦</div>
+    New Package Dependencies
+  </div>
+  <p class="section-subtitle">Additions needed to <code>pubspec.yaml</code> for all three features.</p>
+
+  <div class="pkg-card">
+    <div class="pkg-header">
+      <span>🔔 Notifications</span>
+      <span class="badge badge-new">Required</span>
+    </div>
+    <div class="pkg-row">
+      <div class="pkg-name">flutter_local_notifications: ^18.0.0</div>
+      <div class="pkg-desc">Core notification scheduling. Supports iOS rich notifications, Android channels, exact time scheduling, and custom payloads for deep linking.</div>
+    </div>
+    <div class="pkg-row">
+      <div class="pkg-name">timezone: ^0.9.0</div>
+      <div class="pkg-desc">Required by flutter_local_notifications for accurate timezone-aware scheduled notifications (e.g., 7am in the user's local timezone).</div>
+    </div>
+    <div class="pkg-row">
+      <div class="pkg-name">permission_handler: ^11.3.0</div>
+      <div class="pkg-desc">Request notification permission on Android 13+ (<code>POST_NOTIFICATIONS</code>) and iOS. Also used to check and redirect to settings if denied.</div>
+    </div>
+  </div>
+
+  <div class="pkg-card">
+    <div class="pkg-header">
+      <span>📲 Home Screen Widget</span>
+      <span class="badge badge-new">Required</span>
+    </div>
+    <div class="pkg-row">
+      <div class="pkg-name">home_widget: ^0.6.0</div>
+      <div class="pkg-desc">Cross-platform bridge to native iOS WidgetKit and Android Glance widgets. Handles shared data storage, widget update triggers, and background callbacks.</div>
+    </div>
+    <div class="pkg-row">
+      <div class="pkg-name">workmanager: ^0.5.2</div>
+      <div class="pkg-desc">Android background task scheduler. Used to refresh the widget quote daily even when the app is closed. iOS uses Background App Refresh handled by home_widget directly.</div>
+    </div>
+  </div>
+
+  <div class="pkg-card">
+    <div class="pkg-header">
+      <span>💾 Persistence & Quotes</span>
+      <span class="badge badge-new">Required</span>
+    </div>
+    <div class="pkg-row">
+      <div class="pkg-name">shared_preferences: ^2.3.0</div>
+      <div class="pkg-desc">Persists the daily quote JSON and notification schedule settings. Also readable from the native widget side via App Group (iOS) / plugin storage (Android).</div>
+    </div>
+    <div class="pkg-row">
+      <div class="pkg-name">share_plus: ^10.0.0</div>
+      <div class="pkg-desc">Optional: "Share" action on the QuoteCard — shares the Arabic text + translation as plain text or a generated image card via the OS share sheet.</div>
+    </div>
+  </div>
+
+  <h3 style="font-size:15px;font-weight:800;margin:20px 0 10px">📝 pubspec.yaml additions</h3>
+  <pre><code>dependencies:
+  <span class="hlc"># existing ↑</span>
+
+  <span class="hlc"># --- Notifications ---</span>
+  <span class="hlm">flutter_local_notifications</span>: ^<span class="hln">18.0.0</span>
+  <span class="hlm">timezone</span>:                    ^<span class="hln">0.9.0</span>
+  <span class="hlm">permission_handler</span>:          ^<span class="hln">11.3.0</span>
+
+  <span class="hlc"># --- Home Screen Widget ---</span>
+  <span class="hlm">home_widget</span>:                 ^<span class="hln">0.6.0</span>
+  <span class="hlm">workmanager</span>:                 ^<span class="hln">0.5.2</span>
+
+  <span class="hlc"># --- Persistence & Sharing ---</span>
+  <span class="hlm">shared_preferences</span>:          ^<span class="hln">2.3.0</span>
+  <span class="hlm">share_plus</span>:                  ^<span class="hln">10.0.0</span>    <span class="hlc"># optional</span></code></pre>
+</section>
+
+
+<!-- ══════════════════════════════════════════════
+     SECTION 5 — ROADMAP
+═══════════════════════════════════════════════════ -->
+<section id="roadmap">
+  <div class="section-title">
+    <div class="section-icon green">🗓</div>
+    Implementation Roadmap
+  </div>
+  <p class="section-subtitle">Suggested phased delivery across 3 milestones targeting v1.0.1, v1.1.0, and v1.2.0.</p>
+
+  <div class="timeline">
+    <div class="tl-item">
+      <div class="tl-dot"></div>
+      <div class="tl-phase">PHASE 1 — v1.0.1 · ~1 week</div>
+      <div class="tl-title">Player UI Hotfix Release</div>
+      <ul class="tl-items">
+        <li>Fix controls row overflow (#1) — <code>Row → MainAxisAlignment.spaceBetween</code></li>
+        <li>Fix seek bar drag reset on track change (#2) — <code>BlocListener</code></li>
+        <li>Fix SafeArea in two-pane layout (#3)</li>
+        <li>Fix _PlayerPane layout jump (#4)</li>
+        <li>Fix 3-digit surah number clip (#5) — <code>FittedBox</code></li>
+        <li>Fix speed chip popup position (#6) — clamp to MediaQuery</li>
+        <li>Add seek bar loading indicator (#7) — <code>LinearProgressIndicator</code></li>
+        <li>Add RepaintBoundary to seek bar (#8)</li>
+        <li>Fix panel border radius in two-pane (#9)</li>
+        <li>Fix error message overflow (#10) — banner approach</li>
+      </ul>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-dot"></div>
+      <div class="tl-phase">PHASE 1.5 — v1.0.2 · ~2 weeks</div>
+      <div class="tl-title">UX Navigation Redesign</div>
+      <ul class="tl-items">
+        <li>Create <code>SurahDetailPage</code> with hero header + embedded player + ayah list</li>
+        <li>Change SurahTile tap → navigate (not play immediately)</li>
+        <li>Add visible reciter chip in detail page header</li>
+        <li>Embed player inside detail page (remove bottom overlay from search screen)</li>
+        <li>Add persistent <code>MiniPlayerBar</code> to SearchScreen</li>
+        <li>Separate "collapse" from "stop" — ✕ hides panel, doesn't stop audio</li>
+        <li>Improve loading state: shimmer seek bar + "Loading audio…" label</li>
+        <li>Auto-scroll ayah list to active verse (proportional approximation)</li>
+        <li>Move speed chip to seek bar row; add tooltip to replay button</li>
+      </ul>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-dot"></div>
+      <div class="tl-phase">PHASE 2 — v1.1.0 · ~2–3 weeks</div>
+      <div class="tl-title">Daily Ayah Quotes + Notifications</div>
+      <ul class="tl-items">
+        <li>Add <code>QuoteModel</code> + <code>QuoteService</code></li>
+        <li>Add <code>NotificationService</code> + <code>flutter_local_notifications</code> setup</li>
+        <li>Create <code>QuoteBloc</code> (state: quote / schedule / status)</li>
+        <li>Build <code>QuoteCard</code> widget (gradient, Arabic text, translation)</li>
+        <li>Extend SettingsScreen with "Daily Reminders" section</li>
+        <li>Handle notification deep link → <code>AyahView.show()</code></li>
+        <li>Add permission request flow (iOS + Android 13+)</li>
+        <li>Register <code>QuoteService</code> in <code>service_locator.dart</code></li>
+      </ul>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-dot"></div>
+      <div class="tl-phase">PHASE 3 — v1.2.0 · ~3–4 weeks</div>
+      <div class="tl-title">Home Screen Widget (iOS + Android)</div>
+      <ul class="tl-items">
+        <li>Add <code>home_widget</code> + <code>workmanager</code> packages</li>
+        <li>Create <code>WidgetDataService</code> + wire to <code>QuoteBloc</code> + <code>PlayerBloc</code></li>
+        <li>iOS: Create WidgetKit extension in Xcode, configure App Group</li>
+        <li>iOS: Implement Small + Medium + Lock Screen widget families</li>
+        <li>Android: Create Glance <code>QuranWidget</code> + <code>QuranWidgetReceiver</code></li>
+        <li>Android: Register in <code>AndroidManifest.xml</code>, add XML metadata</li>
+        <li>Register background refresh callback in <code>main.dart</code></li>
+        <li>Handle widget tap deep link → <code>QuoteCard</code> or surah view</li>
+        <li>QA: Test daily refresh, offline behavior, large/small widget</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- SUMMARY -->
+  <div class="summary" style="margin-top:32px">
+    <h3>📊 Summary</h3>
+    <div class="summary-grid">
+      <div class="summary-item">
+        <strong>10</strong>
+        <span>Player UI bugs identified and fixed</span>
+      </div>
+      <div class="summary-item">
+        <strong>8</strong>
+        <span>Implementation steps for quotes feature</span>
+      </div>
+      <div class="summary-item">
+        <strong>7</strong>
+        <span>Implementation steps for widget feature</span>
+      </div>
+      <div class="summary-item">
+        <strong>7</strong>
+        <span>New packages added to pubspec.yaml</span>
+      </div>
+      <div class="summary-item">
+        <strong>4</strong>
+        <span>Delivery phases (v1.0.1 → v1.2.0)</span>
+      </div>
+      <div class="summary-item">
+        <strong>10</strong>
+        <span>Additional UX flow issues identified &amp; fixed</span>
+      </div>
+      <div class="summary-item">
+        <strong>4</strong>
+        <span>Widget size variants (small, medium, large, lock)</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+</div><!-- /main -->
+
+<script>
+  // Toggle bug accordion
+  function toggleBug(el) { el.classList.toggle('open'); }
+
+  // Nav active state
+  const sections = document.querySelectorAll('section[id]');
+  const tabs = document.querySelectorAll('.nav-tab');
+
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        tabs.forEach(t => t.classList.remove('active'));
+        const active = document.querySelector(`.nav-tab[href="#${e.target.id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-40% 0px -55% 0px' });
+
+  sections.forEach(s => observer.observe(s));
+
+  // Smooth scroll for nav tabs
+  tabs.forEach(tab => {
+    tab.addEventListener('click', e => {
+      e.preventDefault();
+      const target = document.querySelector(tab.getAttribute('href'));
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+</script>
+</body>
+</html>

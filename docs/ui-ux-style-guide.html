@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quran Apps — UI/UX Analysis &amp; Style Guide</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Scheherazade+New:wght@400;700&display=swap');
+
+  :root{
+    --primary:#0F7C5A;
+    --primary-dark:#0A4D38;
+    --accent:#E5B25D;
+    --surface:#F6F8F7;
+    --surface-dark:#101816;
+    --on-surface:#1B231F;
+    --on-surface-variant:#5B6863;
+    --outline-variant:rgba(91,104,99,0.28);
+    --gradient: linear-gradient(135deg, #0F7C5A 0%, #0A4D38 100%);
+    --radius-card:20px;
+    --radius-hero:28px;
+    --radius-input:18px;
+    --radius-pill:999px;
+    --shadow-soft: 0 8px 24px rgba(15,40,30,0.10);
+    --shadow-strong: 0 12px 32px rgba(15,40,30,0.18);
+    --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px;
+    --space-5:20px; --space-6:24px; --space-7:32px; --space-8:48px;
+    --max-content: 1180px;
+  }
+
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    color:var(--on-surface);
+    background:var(--surface);
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  .arabic{font-family:'Scheherazade New','Traditional Arabic',serif;}
+
+  /* ===== Layout shell ===== */
+  .shell{display:flex; min-height:100vh;}
+  .sidebar{
+    width:264px; flex-shrink:0;
+    background:var(--gradient);
+    color:#fff;
+    position:sticky; top:0; height:100vh; overflow-y:auto;
+    padding:var(--space-6) var(--space-5);
+  }
+  .sidebar h1{font-size:18px; font-weight:800; margin:0 0 2px; letter-spacing:.2px;}
+  .sidebar .tag{font-size:12px; color:rgba(255,255,255,.7); margin-bottom:var(--space-6);}
+  .sidebar nav a{
+    display:block; color:rgba(255,255,255,.82); text-decoration:none;
+    font-size:13.5px; font-weight:600; padding:8px 12px; border-radius:10px;
+    margin-bottom:2px; transition:background .15s ease, color .15s ease;
+  }
+  .sidebar nav a:hover{background:rgba(255,255,255,.12); color:#fff;}
+  .sidebar nav .group-label{
+    font-size:11px; text-transform:uppercase; letter-spacing:1.2px;
+    color:rgba(255,255,255,.55); margin:18px 0 6px 12px; font-weight:700;
+  }
+
+  .content{flex:1; min-width:0;}
+  .container{max-width:var(--max-content); margin:0 auto; padding:var(--space-8) var(--space-7) 120px;}
+
+  section{margin-bottom:64px; scroll-margin-top:24px;}
+  section h2{
+    font-size:26px; font-weight:800; margin:0 0 6px; letter-spacing:-.2px;
+  }
+  section .lead{color:var(--on-surface-variant); font-size:15px; max-width:760px; margin:0 0 28px;}
+  h3{font-size:17px; font-weight:700; margin:32px 0 12px;}
+  p{color:var(--on-surface-variant); font-size:14.5px;}
+  code{
+    background:#E9EFEC; color:#0A4D38; padding:2px 7px; border-radius:6px;
+    font-size:12.5px; font-family:'SFMono-Regular',Consolas,Menlo,monospace;
+  }
+  .pill-label{
+    display:inline-block; font-size:11px; font-weight:700; letter-spacing:.6px;
+    text-transform:uppercase; color:var(--primary); background:rgba(15,124,90,.10);
+    border-radius:var(--radius-pill); padding:4px 12px; margin-bottom:12px;
+  }
+
+  /* ===== Hero ===== */
+  .hero{
+    background:var(--gradient); color:#fff; border-radius:0 0 36px 36px;
+    padding:56px var(--space-7) 64px;
+  }
+  .hero .eyebrow{font-size:12px; letter-spacing:2px; text-transform:uppercase; color:rgba(255,255,255,.7); font-weight:700;}
+  .hero h1{font-size:clamp(28px,4vw,40px); font-weight:800; margin:8px 0 12px; max-width:760px;}
+  .hero p{color:rgba(255,255,255,.82); max-width:680px; font-size:15px;}
+  .hero .meta{display:flex; gap:28px; margin-top:28px; flex-wrap:wrap;}
+  .hero .meta div{font-size:13px; color:rgba(255,255,255,.65);}
+  .hero .meta strong{display:block; font-size:20px; color:#fff; font-weight:800;}
+
+  /* ===== Cards / grid ===== */
+  .grid{display:grid; gap:var(--space-5);}
+  .grid-2{grid-template-columns:repeat(2,1fr);}
+  .grid-3{grid-template-columns:repeat(3,1fr);}
+  .grid-4{grid-template-columns:repeat(4,1fr);}
+  @media (max-width:980px){ .grid-4{grid-template-columns:repeat(2,1fr);} .grid-3{grid-template-columns:repeat(2,1fr);} }
+  @media (max-width:640px){ .grid-2,.grid-3,.grid-4{grid-template-columns:1fr;} }
+
+  .card{
+    background:#fff; border:1px solid var(--outline-variant); border-radius:var(--radius-card);
+    padding:var(--space-5);
+  }
+  .card h4{margin:0 0 6px; font-size:15px; font-weight:700;}
+  .card p{margin:0; font-size:13.5px;}
+
+  /* ===== Color swatches ===== */
+  .swatch{border-radius:16px; overflow:hidden; border:1px solid var(--outline-variant); background:#fff;}
+  .swatch .fill{height:84px;}
+  .swatch .info{padding:12px 14px;}
+  .swatch .info .name{font-weight:700; font-size:13.5px;}
+  .swatch .info .hex{font-size:12px; color:var(--on-surface-variant); font-family:monospace;}
+  .swatch .info .usage{font-size:12px; color:var(--on-surface-variant); margin-top:4px;}
+
+  /* ===== Type specimen ===== */
+  .type-row{
+    display:flex; align-items:baseline; justify-content:space-between; gap:24px;
+    padding:18px 0; border-bottom:1px solid var(--outline-variant); flex-wrap:wrap;
+  }
+  .type-row:last-child{border-bottom:none;}
+  .type-row .sample{flex:1; min-width:240px;}
+  .type-row .specs{font-size:12px; color:var(--on-surface-variant); font-family:monospace; text-align:right; white-space:nowrap;}
+
+  /* ===== Token table ===== */
+  table{width:100%; border-collapse:collapse; font-size:13.5px;}
+  th{
+    text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.8px;
+    color:var(--on-surface-variant); font-weight:700; padding:10px 14px; border-bottom:2px solid var(--outline-variant);
+  }
+  td{padding:12px 14px; border-bottom:1px solid var(--outline-variant); color:var(--on-surface);}
+  tr:last-child td{border-bottom:none;}
+  .mono{font-family:monospace; font-size:12.5px; color:var(--on-surface-variant);}
+
+  /* ===== Component preview shells ===== */
+  .preview{
+    background:linear-gradient(180deg,#EEF3F0,#E4ECE7);
+    border-radius:20px; padding:28px; display:flex; align-items:center; justify-content:center;
+    min-height:160px;
+  }
+  .preview.dark{background:linear-gradient(180deg,#1a2622,#0e1614);}
+  .specimen{
+    border:1px solid var(--outline-variant); border-radius:18px; overflow:hidden; background:#fff;
+  }
+  .specimen .preview{border-radius:0;}
+  .specimen .meta{padding:16px 20px;}
+  .specimen .meta h4{margin:0 0 4px; font-size:14.5px;}
+  .specimen .meta p{margin:0; font-size:13px;}
+  .specimen .tags{display:flex; gap:6px; margin-top:10px; flex-wrap:wrap;}
+  .specimen .tags span{
+    font-size:11px; font-weight:600; padding:4px 10px; border-radius:var(--radius-pill);
+    background:rgba(15,124,90,.10); color:var(--primary);
+  }
+
+  /* ===== Mock UI elements (replicas of Flutter widgets) ===== */
+  .mock-phone{
+    width:280px; border-radius:34px; background:#0c1310; padding:10px; box-shadow:var(--shadow-strong);
+  }
+  .mock-screen{background:var(--surface); border-radius:26px; overflow:hidden; min-height:420px; display:flex; flex-direction:column;}
+  .mock-hero{background:var(--gradient); border-radius:0 0 22px 22px; padding:18px 16px 20px; color:#fff;}
+  .mock-hero .row{display:flex; align-items:center; gap:10px;}
+  .mock-logo{width:34px; height:34px; border-radius:10px; background:rgba(255,255,255,.25);}
+  .mock-title{font-weight:800; font-size:15px;}
+  .mock-sub{font-size:10.5px; color:rgba(255,255,255,.7);}
+  .mock-search{
+    margin-top:14px; background:#fff; border-radius:14px; padding:10px 14px; display:flex; align-items:center; gap:8px;
+    color:#9aa39e; font-size:12px; box-shadow:0 6px 16px rgba(0,0,0,.15);
+  }
+  .mock-list{padding:12px; display:flex; flex-direction:column; gap:8px; flex:1;}
+  .mock-tile{
+    display:flex; align-items:center; gap:10px; border:1px solid var(--outline-variant); border-radius:16px; padding:9px 10px; background:#fff;
+  }
+  .mock-tile.active{background:rgba(15,124,90,.08); border-color:rgba(15,124,90,.35);}
+  .mock-badge{
+    width:38px; height:38px; border-radius:11px; background:#DDEAE3; color:var(--primary);
+    display:flex; align-items:center; justify-content:center; font-weight:700; font-size:12px; flex-shrink:0;
+  }
+  .mock-tile.active .mock-badge{background:var(--gradient); color:#fff;}
+  .mock-tile .lines{flex:1; min-width:0;}
+  .mock-tile .l1{font-weight:700; font-size:12.5px; color:var(--on-surface);}
+  .mock-tile .l2{font-size:10.5px; color:var(--on-surface-variant); margin-top:2px;}
+  .mock-chevron{color:#9aa39e; font-size:16px;}
+
+  .mock-player{
+    margin:10px; border-radius:20px; background:var(--gradient); color:#fff; padding:14px 16px;
+  }
+  .mock-player .row{display:flex; align-items:center; gap:10px;}
+  .mock-player .art{width:40px; height:40px; border-radius:12px; background:rgba(255,255,255,.2); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:13px;}
+  .mock-player .titles{flex:1;}
+  .mock-player .t1{font-weight:800; font-size:13px;}
+  .mock-player .t2{font-size:10.5px; color:rgba(255,255,255,.7);}
+  .mock-seek{height:3px; background:rgba(255,255,255,.3); border-radius:2px; margin:14px 0 6px; position:relative;}
+  .mock-seek::after{content:""; position:absolute; left:0; top:-3.5px; width:38%; height:3px; background:#fff; border-radius:2px;}
+  .mock-seek::before{content:""; position:absolute; left:38%; top:-5px; width:10px; height:10px; margin-left:-5px; background:#fff; border-radius:50%;}
+  .mock-times{display:flex; justify-content:space-between; font-size:10px; color:rgba(255,255,255,.7);}
+  .mock-controls{display:flex; align-items:center; justify-content:space-between; margin-top:12px;}
+  .ghost-btn{
+    width:34px; height:34px; border-radius:50%; background:rgba(255,255,255,.18);
+    display:flex; align-items:center; justify-content:center; font-size:14px;
+  }
+  .primary-btn{
+    width:50px; height:50px; border-radius:50%; background:#fff; color:var(--primary);
+    display:flex; align-items:center; justify-content:center; font-size:20px; box-shadow:0 6px 16px rgba(0,0,0,.25);
+  }
+  .speed-chip{font-size:10.5px; font-weight:700; background:rgba(255,255,255,.18); padding:5px 10px; border-radius:var(--radius-pill);}
+
+  .mock-quote{
+    margin:12px; border-radius:20px; background:var(--gradient); color:#fff; padding:18px; box-shadow:var(--shadow-soft);
+  }
+  .mock-quote .badge{display:inline-flex; align-items:center; gap:6px; background:rgba(255,255,255,.18); padding:4px 12px; border-radius:var(--radius-pill); font-size:10px; font-weight:700;}
+  .mock-quote .arabic{font-family:'Scheherazade New',serif; direction:rtl; font-size:19px; line-height:1.8; margin:14px 0 8px;}
+  .mock-quote .tr{font-size:11px; color:rgba(255,255,255,.75); font-style:italic;}
+
+  .mock-ayah{border:1px solid var(--outline-variant); border-radius:14px; padding:12px; background:#fff; margin:0 12px 12px;}
+  .mock-ayah .num{display:inline-block; background:#E5EDE9; color:var(--on-surface-variant); border-radius:var(--radius-pill); padding:2px 10px; font-size:10px; font-family:'Scheherazade New',serif; float:right;}
+  .mock-ayah .arabic{font-family:'Scheherazade New',serif; direction:rtl; text-align:justify; font-size:21px; line-height:1.9; clear:both; margin-top:6px;}
+  .mock-ayah .tr{font-size:11.5px; color:var(--on-surface-variant); margin-top:8px;}
+
+  .mock-empty{display:flex; flex-direction:column; align-items:center; justify-content:center; flex:1; padding:32px; text-align:center; gap:10px;}
+  .mock-empty .circle{width:64px; height:64px; border-radius:50%; background:rgba(15,124,90,.12); display:flex; align-items:center; justify-content:center; font-size:24px; color:var(--primary);}
+  .mock-empty .t1{font-weight:700; font-size:13px;}
+  .mock-empty .t2{font-size:11.5px; color:var(--on-surface-variant); max-width:200px;}
+
+  /* ===== Responsive diagram blocks ===== */
+  .bp-row{display:grid; grid-template-columns:repeat(3,1fr); gap:16px;}
+  @media (max-width:760px){ .bp-row{grid-template-columns:1fr;} }
+  .bp-card{border:1px solid var(--outline-variant); border-radius:18px; padding:18px; background:#fff;}
+  .bp-card .range{font-family:monospace; font-size:12px; color:var(--primary); font-weight:700;}
+  .bp-card h4{margin:6px 0 8px; font-size:15px;}
+  .device-frame{border:2px dashed var(--outline-variant); border-radius:12px; height:74px; margin-top:12px; display:flex; align-items:center; justify-content:center; font-size:11px; color:var(--on-surface-variant);}
+  .device-frame.phone{width:46px; margin:12px auto 0;}
+  .device-frame.tablet{width:120px; margin:12px auto 0;}
+  .device-frame.desktop{width:100%; height:62px;}
+
+  .layout-diagram{display:flex; gap:10px; border:1px solid var(--outline-variant); border-radius:16px; padding:14px; background:#fff;}
+  .layout-diagram .pane{border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:#fff; min-height:90px;}
+  .pane.list{background:var(--primary); flex:3;}
+  .pane.player{background:var(--primary-dark); flex:2;}
+  .pane.full{background:var(--primary); flex:1;}
+
+  /* ===== Do / Don't ===== */
+  .dd-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  @media (max-width:640px){ .dd-grid{grid-template-columns:1fr;} }
+  .dd{border-radius:16px; padding:16px 18px; font-size:13.5px;}
+  .dd.do{background:rgba(15,124,90,.08); border:1px solid rgba(15,124,90,.25);}
+  .dd.dont{background:rgba(214,69,69,.07); border:1px solid rgba(214,69,69,.22);}
+  .dd .label{font-weight:800; font-size:12px; text-transform:uppercase; letter-spacing:1px; margin-bottom:6px;}
+  .dd.do .label{color:var(--primary);}
+  .dd.dont .label{color:#C24545;}
+
+  /* ===== Findings list ===== */
+  .finding{display:flex; gap:14px; padding:16px 0; border-bottom:1px solid var(--outline-variant);}
+  .finding:last-child{border-bottom:none;}
+  .finding .num{
+    flex-shrink:0; width:30px; height:30px; border-radius:9px; background:rgba(15,124,90,.12);
+    color:var(--primary); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:13px;
+  }
+  .finding h4{margin:0 0 4px; font-size:14.5px;}
+  .finding p{margin:0;}
+  .badge-tag{display:inline-block; font-size:10.5px; font-weight:700; padding:2px 9px; border-radius:var(--radius-pill); margin-left:8px; vertical-align:middle;}
+  .badge-tag.strength{background:rgba(15,124,90,.12); color:var(--primary);}
+  .badge-tag.improve{background:rgba(229,178,93,.20); color:#9A6B12;}
+
+  /* ===== Footer ===== */
+  footer{border-top:1px solid var(--outline-variant); padding:28px var(--space-7); font-size:12.5px; color:var(--on-surface-variant); display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px;}
+
+  /* ===== Mobile nav toggle ===== */
+  .nav-toggle{display:none;}
+  @media (max-width:920px){
+    .sidebar{
+      position:fixed; left:0; top:0; bottom:0; z-index:50; transform:translateX(-100%);
+      transition:transform .25s ease; box-shadow:var(--shadow-strong);
+    }
+    .sidebar.open{transform:translateX(0);}
+    .nav-toggle{
+      display:flex; position:fixed; bottom:24px; right:24px; z-index:60; width:52px; height:52px;
+      border-radius:50%; background:var(--gradient); color:#fff; align-items:center; justify-content:center;
+      box-shadow:var(--shadow-strong); font-size:20px; border:none; cursor:pointer;
+    }
+    .container{padding:48px 20px 100px;}
+    .hero{padding:40px 20px 48px; border-radius:0 0 28px 28px;}
+  }
+  @media (min-width:921px){ .nav-toggle{display:none !important;} }
+</style>
+</head>
+<body>
+
+<button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+
+<div class="shell">
+  <aside class="sidebar" id="sidebar">
+    <h1>Quran Apps</h1>
+    <div class="tag">UI/UX Analysis &amp; Style Guide · v1.0</div>
+    <nav>
+      <div class="group-label">Mulai</div>
+      <a href="#overview">Overview</a>
+      <a href="#analysis">Analisa UI/UX</a>
+
+      <div class="group-label">Foundations</div>
+      <a href="#color">Warna &amp; Gradient</a>
+      <a href="#typography">Tipografi</a>
+      <a href="#spacing">Spacing, Radius &amp; Elevation</a>
+
+      <div class="group-label">Responsive</div>
+      <a href="#breakpoints">Breakpoint &amp; Density</a>
+      <a href="#layouts">Pola Layout Adaptif</a>
+
+      <div class="group-label">Komponen</div>
+      <a href="#comp-header">Hero / Header</a>
+      <a href="#comp-tile">List Tile (Surah)</a>
+      <a href="#comp-player">Player Panel</a>
+      <a href="#comp-cards">Quote &amp; Ayah Card</a>
+      <a href="#comp-controls">Input, Chip &amp; Button</a>
+      <a href="#comp-states">Empty &amp; Loading State</a>
+
+      <div class="group-label">Panduan</div>
+      <a href="#guidelines">Prinsip &amp; Do/Don't</a>
+    </nav>
+  </aside>
+
+  <main class="content">
+    <div class="hero" id="overview">
+      <div class="eyebrow">Design Documentation</div>
+      <h1>Bahasa visual Quran Apps: tenang, hangat, dan mudah beradaptasi di semua ukuran layar.</h1>
+      <p>Dokumen ini merangkum hasil audit terhadap struktur UI yang sudah berjalan (theme, komponen, dan sistem responsive di <code>lib/core</code> &amp; <code>lib/features</code>), lalu menerjemahkannya menjadi panduan style yang konsisten — lengkap dengan token desain, anatomi komponen, dan aturan adaptasi untuk perangkat compact, medium, hingga expanded (phone, foldable, tablet, desktop).</p>
+      <div class="meta">
+        <div><strong>Material 3</strong>Basis sistem desain</div>
+        <div><strong>3</strong>Breakpoint inti (600 / 840 / 1200dp)</div>
+        <div><strong>2 Bahasa Tipe</strong>Latin (Inter) + Quranic (Scheherazade New)</div>
+        <div><strong>Gradient Brand</strong>Emerald → Deep Teal</div>
+      </div>
+    </div>
+
+    <div class="container">
+
+      <!-- ================= ANALYSIS ================= -->
+      <section id="analysis">
+        <span class="pill-label">Analisa</span>
+        <h2>Analisa UI/UX yang sudah ada</h2>
+        <p class="lead">Dari audit kode sumber (theme, responsive helper, dan tiap layar fitur), berikut observasi utama — kekuatan yang perlu dipertahankan, dan area yang layak diperkuat agar konsisten di semua kerapatan layar.</p>
+
+        <div class="finding">
+          <div class="num">1</div>
+          <div>
+            <h4>Identitas visual yang kuat lewat gradient hero <span class="badge-tag strength">Kekuatan</span></h4>
+            <p>Header dengan <code>brandGradient</code> (emerald → deep teal) dan sudut bawah membulat (radius 28) dipakai konsisten di Search, Surah Detail, Player, dan Quote Card. Ini menciptakan "anchor" visual yang mudah dikenali — namun perlu dijaga agar tidak berlebihan di layar lebar (lihat poin 6).</p>
+          </div>
+        </div>
+        <div class="finding">
+          <div class="num">2</div>
+          <div>
+            <h4>Sistem responsive sudah punya fondasi yang baik <span class="badge-tag strength">Kekuatan</span></h4>
+            <p><code>ResponsiveInfo</code> &amp; <code>Breakpoints</code> di <code>core/responsive</code> sudah mendefinisikan compact/medium/expanded, <code>isShortHeight</code>, dan <code>useTwoPane</code>. Pola ini dipakai di <code>SearchScreen</code> untuk beralih antara layout satu-kolom (mobile) dan dua-panel (tablet/desktop/landscape). Fondasi ini sebaiknya dijadikan acuan tunggal — lihat token breakpoint di bawah.</p>
+          </div>
+        </div>
+        <div class="finding">
+          <div class="num">3</div>
+          <div>
+            <h4>Hierarki tipografi Arab vs Latin sudah dipikirkan dengan baik <span class="badge-tag strength">Kekuatan</span></h4>
+            <p>Teks Arab konsisten memakai <code>Scheherazade New</code> dengan <code>Directionality(textDirection: TextDirection.rtl)</code>, line-height lapang (1.8–1.9), dan penomoran ayat bergaya ornamen <code>﴿n﴾</code> — sebuah detail yang menghormati konvensi penulisan Al-Qur'an. Pertahankan pola ini di komponen baru.</p>
+          </div>
+        </div>
+        <div class="finding">
+          <div class="num">4</div>
+          <div>
+            <h4>State kosong &amp; loading punya komponen bersama <span class="badge-tag strength">Kekuatan</span></h4>
+            <p><code>EmptyStateView</code> dan <code>TrackTileShimmer</code> dipakai ulang di beberapa layar (search gagal, hasil kosong, player kosong) sehingga nada visual tetap konsisten — lingkaran ikon lembut, judul tegas, subjudul redup, CTA opsional.</p>
+          </div>
+        </div>
+        <div class="finding">
+          <div class="num">5</div>
+          <div>
+            <h4>Variasi kecil pada komponen yang seharusnya identik <span class="badge-tag improve">Bisa diperkuat</span></h4>
+            <p><code>SeekBar</code> di <code>PlayerPanel</code> dan <code>_EmbeddedSeekBar</code> di <code>SurahDetailPage</code> menduplikasi logika &amp; gaya yang nyaris sama (ukuran tombol primer 64 vs 56, ghost button 10 vs 9 padding, ikon <code>replay_rounded</code> vs <code>replay_10_rounded</code>). Menyatukan keduanya menjadi satu <em>shared widget</em> dengan parameter ukuran akan mengurangi drift visual jangka panjang.</p>
+          </div>
+        </div>
+        <div class="finding">
+          <div class="num">6</div>
+          <div>
+            <h4>Pola "card di atas gradient" perlu pedoman kontras eksplisit <span class="badge-tag improve">Bisa diperkuat</span></h4>
+            <p>Banyak teks putih/putih-70% diletakkan langsung di atas <code>brandGradient</code> (player, quote card, hero). Ini terlihat bagus di mode terang, tapi penting menetapkan rasio kontras minimum (≥4.5:1 untuk teks isi) sebagai aturan resmi — terutama saat token warna berkembang atau dark mode disesuaikan.</p>
+          </div>
+        </div>
+        <div class="finding">
+          <div class="num">7</div>
+          <div>
+            <h4>Lebar konten di layar lebar belum dibatasi secara konsisten <span class="badge-tag improve">Bisa diperkuat</span></h4>
+            <p>Token <code>Breakpoints.contentMaxWidth = 720</code> sudah didefinisikan, namun tidak semua layar (mis. Settings, Surah Detail di mode <code>expanded</code>) terlihat menerapkannya. Menetapkan aturan "bungkus konten utama dengan <code>ConstrainedBox(maxWidth: contentMaxWidth)</code> dan pusatkan" akan menjaga keterbacaan teks panjang (terutama ayat + terjemahan) di desktop/tablet besar.</p>
+          </div>
+        </div>
+        <div class="finding">
+          <div class="num">8</div>
+          <div>
+            <h4>Target sentuh perlu diverifikasi pada kerapatan tinggi <span class="badge-tag improve">Bisa diperkuat</span></h4>
+            <p>Beberapa elemen interaktif kecil (ghost button 34–36dp efektif, ikon 18–20px dengan padding tipis, chip kecepatan) berada dekat batas minimum 44×44dp yang direkomendasikan untuk aksesibilitas sentuh. Pada perangkat dengan kerapatan piksel tinggi atau pengaturan skala teks besar, ini berisiko sulit ditekan — lihat panduan target sentuh di bagian Spacing.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= COLOR ================= -->
+      <section id="color">
+        <span class="pill-label">Foundations</span>
+        <h2>Warna &amp; Gradient</h2>
+        <p class="lead">Token warna berasal dari <code>AppColors</code> (seed Material 3). Warna primer "emerald deep teal" membawa nuansa tenang dan religius; emas (<code>accent</code>) dicadangkan untuk aksen sesekali — bukan warna dominan.</p>
+
+        <div class="grid grid-4">
+          <div class="swatch">
+            <div class="fill" style="background:#0F7C5A"></div>
+            <div class="info"><div class="name">Primary</div><div class="hex">#0F7C5A</div><div class="usage">Aksi utama, ikon aktif, teks tertekan</div></div>
+          </div>
+          <div class="swatch">
+            <div class="fill" style="background:#0A4D38"></div>
+            <div class="info"><div class="name">Primary Dark</div><div class="hex">#0A4D38</div><div class="usage">Ujung gradient, lapisan overlay player</div></div>
+          </div>
+          <div class="swatch">
+            <div class="fill" style="background:#E5B25D"></div>
+            <div class="info"><div class="name">Accent (Gold)</div><div class="hex">#E5B25D</div><div class="usage">Aksen jarang — highlight spesial, badge premium</div></div>
+          </div>
+          <div class="swatch">
+            <div class="fill" style="background:#F6F8F7; border-bottom:1px solid var(--outline-variant)"></div>
+            <div class="info"><div class="name">Surface</div><div class="hex">#F6F8F7</div><div class="usage">Latar layar mode terang</div></div>
+          </div>
+          <div class="swatch">
+            <div class="fill" style="background:#101816"></div>
+            <div class="info"><div class="name">Surface Dark</div><div class="hex">#101816</div><div class="usage">Latar layar mode gelap</div></div>
+          </div>
+          <div class="swatch">
+            <div class="fill" style="background:linear-gradient(135deg,#0F7C5A,#0A4D38)"></div>
+            <div class="info"><div class="name">Brand Gradient</div><div class="hex">135° · #0F7C5A → #0A4D38</div><div class="usage">Hero header, player panel, quote card</div></div>
+          </div>
+          <div class="swatch">
+            <div class="fill" style="background:#fff; border-bottom:1px solid var(--outline-variant)"></div>
+            <div class="info"><div class="name">Surface (Card)</div><div class="hex">scheme.surface</div><div class="usage">Latar kartu &amp; list tile, border outline-variant 40%</div></div>
+          </div>
+          <div class="swatch">
+            <div class="fill" style="background:rgba(15,124,90,.10); border-bottom:1px solid var(--outline-variant)"></div>
+            <div class="info"><div class="name">Primary 10% (Active bg)</div><div class="hex">primary @ 10%</div><div class="usage">Latar item aktif (surah tile, ayah aktif)</div></div>
+          </div>
+        </div>
+
+        <h3>Aturan penggunaan</h3>
+        <div class="dd-grid">
+          <div class="dd do">
+            <div class="label">Lakukan</div>
+            Gunakan <code>ColorScheme.fromSeed(seedColor: primary)</code> agar semua turunan (container, onSurfaceVariant, outline) tetap harmonis dan otomatis menyesuaikan saat <em>seed</em> berubah.
+          </div>
+          <div class="dd dont">
+            <div class="label">Hindari</div>
+            Menambahkan warna baru di luar token tanpa alasan — terutama warna terang/saturasi tinggi yang bersaing dengan gradient brand sebagai fokus utama.
+          </div>
+          <div class="dd do">
+            <div class="label">Lakukan</div>
+            Pakai opacity bertingkat (<code>withValues(alpha: …)</code>) dari satu warna dasar untuk membuat status (aktif/nonaktif/disabled) — pola ini sudah konsisten dipakai di <code>SurahTile</code> &amp; <code>PlayerPanel</code>.
+          </div>
+          <div class="dd dont">
+            <div class="label">Hindari</div>
+            Menulis teks dengan opacity rendah (mis. <code>white54</code>/<code>white70</code>) untuk konten penting di atas gradient — cadangkan untuk label sekunder/metadata saja.
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= TYPOGRAPHY ================= -->
+      <section id="typography">
+        <span class="pill-label">Foundations</span>
+        <h2>Tipografi</h2>
+        <p class="lead">Dua sistem huruf hidup berdampingan: <strong>Inter</strong> (atau font sistem) untuk UI &amp; teks Latin, dan <strong>Scheherazade New</strong> khusus teks Arab/Qur'ani — termasuk nama surah dan penomoran ayat ornamen.</p>
+
+        <h3>Skala Latin (UI &amp; konten)</h3>
+        <div class="card" style="padding:8px 24px;">
+          <div class="type-row">
+            <div class="sample" style="font-size:22px; font-weight:800;">Surah Title / Hero Name</div>
+            <div class="specs">22px · w800 · height 1.1</div>
+          </div>
+          <div class="type-row">
+            <div class="sample" style="font-size:20px; font-weight:700; letter-spacing:.2px;">App Bar / Page Title</div>
+            <div class="specs">20px · w700 · letter-spacing 0.2</div>
+          </div>
+          <div class="type-row">
+            <div class="sample" style="font-size:16px; font-weight:800;">Player Track Name</div>
+            <div class="specs">16px · w800</div>
+          </div>
+          <div class="type-row">
+            <div class="sample" style="font-size:15px; font-weight:700;">List Tile Title (Surah englishName)</div>
+            <div class="specs">15px · w700 · height 1.2</div>
+          </div>
+          <div class="type-row">
+            <div class="sample" style="font-size:14px; color:var(--on-surface-variant);">Body / Subtitle / Section Description</div>
+            <div class="specs">14px · w400–w600</div>
+          </div>
+          <div class="type-row">
+            <div class="sample" style="font-size:12px; color:var(--on-surface-variant);">Caption / Meta (ayah count, durasi, label)</div>
+            <div class="specs">12px · w400–w500</div>
+          </div>
+          <div class="type-row">
+            <div class="sample" style="font-size:11px; font-weight:700; letter-spacing:.8px; text-transform:uppercase; color:var(--primary);">Section Header / Eyebrow</div>
+            <div class="specs">11–12px · w700 · letter-spacing 0.6–1.2</div>
+          </div>
+        </div>
+
+        <h3>Skala Arab / Qur'ani — <span style="font-weight:400; color:var(--on-surface-variant); font-size:13px;">Scheherazade New, RTL, justified</span></h3>
+        <div class="card">
+          <div class="arabic" dir="rtl" style="font-size:26px; line-height:1.9; text-align:justify; margin-bottom:14px;">
+            بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ ۝ الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ
+          </div>
+          <p style="margin-bottom:0;"><strong style="color:var(--on-surface)">Teks ayat (Ayah Card):</strong> 26px · line-height 1.9 · <code>TextAlign.justify</code> · medium weight saat aktif. <strong style="color:var(--on-surface)">Nama surah dalam tile/hero:</strong> 15–20px. <strong style="color:var(--on-surface)">Penomoran ayat:</strong> simbol ornamen <span class="arabic">﴿١﴾</span> dalam pill berlatar lembut, mengikuti konvensi mushaf — selalu rata kanan.</p>
+        </div>
+
+        <h3>Prinsip tipografi</h3>
+        <div class="dd-grid">
+          <div class="dd do"><div class="label">Lakukan</div>Beri ruang baca lapang untuk teks Arab (line-height ≥ 1.8) — Qur'an memiliki tanda diakritik yang butuh napas vertikal lebih dari teks Latin biasa.</div>
+          <div class="dd do"><div class="label">Lakukan</div>Gunakan <code>FittedBox(fit: BoxFit.scaleDown)</code> untuk angka 3 digit (no. surah 100–114) di badge berukuran tetap — pola ini sudah diterapkan dan wajib direplikasi di komponen baru serupa.</div>
+          <div class="dd dont"><div class="label">Hindari</div>Mencampur arah teks dalam satu baris tanpa <code>Directionality</code> eksplisit — selalu bungkus blok Arab dengan <code>Directionality(textDirection: TextDirection.rtl)</code>.</div>
+          <div class="dd dont"><div class="label">Hindari</div>Menurunkan ukuran teks ayat di bawah ~22px demi memuat lebih banyak baris — keterbacaan teks suci lebih penting daripada kepadatan informasi.</div>
+        </div>
+      </section>
+
+      <!-- ================= SPACING ================= -->
+      <section id="spacing">
+        <span class="pill-label">Foundations</span>
+        <h2>Spacing, Radius &amp; Elevation</h2>
+        <p class="lead">Skala spacing 4px-based menjaga ritme vertikal konsisten. Radius besar (16–28px) menjadi penanda gaya "lembut &amp; modern" yang menyatu dengan gradient brand.</p>
+
+        <div class="grid grid-4">
+          <div class="card"><h4>Spacing scale</h4><p><code>4 · 8 · 10 · 12 · 14 · 16 · 18 · 20 · 22 · 24 · 32</code><br>Dipakai sebagai padding/gap. Nilai 14–16px paling umum untuk jarak antar-elemen dalam kartu.</p></div>
+          <div class="card"><h4>Radius — Card &amp; Tile</h4><p><code>20px</code> — dipakai di <code>CardThemeData</code>, <code>SurahTile</code>, dan kartu konten umum.</p></div>
+          <div class="card"><h4>Radius — Hero &amp; Sheet</h4><p><code>28px</code> (sudut bawah hero), <code>24px</code> (atas player panel/bottom sheet), <code>16–18px</code> (badge, input, tombol).</p></div>
+          <div class="card"><h4>Radius — Pill / Chip</h4><p><code>999px</code> — selalu untuk elemen berbentuk kapsul: chip kecepatan, badge meta, tombol aksi mengambang.</p></div>
+        </div>
+
+        <h3>Elevation &amp; Shadow</h3>
+        <table>
+          <tr><th>Token</th><th>Nilai</th><th>Penggunaan</th></tr>
+          <tr><td>Card elevation</td><td class="mono">0 (flat) + border outlineVariant 40%</td><td>Kartu &amp; list tile — kontras dibentuk lewat border, bukan bayangan, untuk kesan bersih</td></tr>
+          <tr><td>Search field shadow</td><td class="mono">elevation 6 · shadow black 25%</td><td>Mengambang di atas gradient hero agar terasa "ditempel"</td></tr>
+          <tr><td>Quote card shadow</td><td class="mono">blur 16 · offset (0,8) · black 12%</td><td>Memberi kedalaman lembut tanpa border tegas</td></tr>
+          <tr><td>Primary play button</td><td class="mono">elevation 4–6 · shadow black 30%</td><td>Menegaskan CTA utama sebagai elemen paling "terangkat"</td></tr>
+        </table>
+
+        <h3>Target sentuh minimum</h3>
+        <div class="card">
+          <p style="margin-bottom:8px;">Rekomendasi: pastikan semua elemen interaktif memiliki area sentuh efektif <strong style="color:var(--on-surface)">≥ 44×44dp</strong> (idealnya 48×48dp), termasuk padding transparan di sekitar ikon kecil. Tombol primer player (56–64dp) sudah sesuai; ghost button (34–36dp visual) sebaiknya diberi <code>InkWell</code>/<code>hitTestArea</code> tambahan agar tetap nyaman pada layar dengan skala teks besar (Accessibility &gt; 130%).</p>
+        </div>
+      </section>
+
+      <!-- ================= BREAKPOINTS ================= -->
+      <section id="breakpoints">
+        <span class="pill-label">Responsive</span>
+        <h2>Breakpoint &amp; Multi-Density Guidelines</h2>
+        <p class="lead">Sumber kebenaran berada di <code>core/responsive/responsive.dart</code> — <code>Breakpoints</code> &amp; <code>ResponsiveInfo</code>. Gunakan token ini di semua layar baru, jangan menulis ukuran ambang baru secara manual.</p>
+
+        <div class="bp-row">
+          <div class="bp-card">
+            <div class="range">&lt; 600dp</div>
+            <h4>Compact</h4>
+            <p style="margin:0;">Ponsel portrait, layar dalam foldable saat tertutup. Layout satu kolom, header hero penuh, player sebagai bottom bar.</p>
+            <div class="device-frame phone">📱</div>
+          </div>
+          <div class="bp-card">
+            <div class="range">600–839dp</div>
+            <h4>Medium</h4>
+            <p style="margin:0;">Ponsel besar landscape, tablet portrait kecil. Mulai memenuhi syarat <code>useTwoPane</code> — list &amp; player dapat berdampingan.</p>
+            <div class="device-frame tablet">📋</div>
+          </div>
+          <div class="bp-card">
+            <div class="range">≥ 1200dp</div>
+            <h4>Expanded</h4>
+            <p style="margin:0;">Tablet landscape, foldable terbuka, desktop. Dua-panel penuh; batasi lebar konten baca dengan <code>contentMaxWidth = 720dp</code> dan pusatkan.</p>
+            <div class="device-frame desktop">🖥️ Konten dipusatkan, max-width 720dp</div>
+          </div>
+        </div>
+
+        <h3>Sumbu tambahan yang perlu diperhitungkan</h3>
+        <table>
+          <tr><th>Kondisi</th><th>Token</th><th>Respons UI</th></tr>
+          <tr><td>Tinggi layar &lt; 480dp</td><td class="mono">isShortHeight</td><td>Header hero beralih ke varian <em>compact</em> (satu baris: logo + search), seperti di <code>SearchHeader._CompactRow</code> — penting untuk ponsel dalam orientasi landscape</td></tr>
+          <tr><td>Orientasi landscape + lebar ≥ 600dp</td><td class="mono">useTwoPane</td><td>Beralih dari <code>Column</code> (list di atas, player di bawah) ke <code>Row</code> (list 60% kiri, player 40% kanan, dipisah divider 1px)</td></tr>
+          <tr><td>Lebar &gt; 720dp pada konten teks panjang</td><td class="mono">contentMaxWidth</td><td>Bungkus kolom ayat + terjemahan dengan <code>ConstrainedBox(maxWidth: 720)</code> dan pusatkan secara horizontal agar panjang baris tetap nyaman dibaca</td></tr>
+          <tr><td>Skala teks sistem besar (Dynamic Type / font scale)</td><td class="mono">MediaQuery.textScaler</td><td>Gunakan <code>FittedBox</code>/<code>AutoSizeText</code> pada elemen berukuran tetap (badge nomor, chip), dan hindari <code>maxLines: 1</code> tanpa <code>overflow: ellipsis</code> pada label penting</td></tr>
+        </table>
+
+        <h3>Checklist kerapatan piksel (mdpi → xxxhdpi, @1x → @3x)</h3>
+        <div class="dd-grid">
+          <div class="dd do"><div class="label">Lakukan</div>Gunakan unit logis (<code>dp</code>/<code>pt</code>) untuk semua ukuran — sudah konsisten dilakukan lewat <code>EdgeInsets</code> &amp; ukuran widget Flutter, yang otomatis di-scale oleh device pixel ratio.</div>
+          <div class="dd do"><div class="label">Lakukan</div>Sediakan aset (logo, ikon kustom) dalam variasi resolusi (1x/2x/3x atau format vektor SVG) agar tetap tajam di layar kerapatan tinggi.</div>
+          <div class="dd dont"><div class="label">Hindari</div>Mengandalkan ukuran piksel fisik untuk keputusan layout — selalu uji dengan <code>ResponsiveInfo</code> berdasarkan <code>dp</code> logis, bukan resolusi layar.</div>
+          <div class="dd dont"><div class="label">Hindari</div>Mengasumsikan rasio aspek tertentu — uji breakpoint di rasio 16:9, 19.5:9, 4:3 (tablet), dan layar lipat untuk memastikan <code>useTwoPane</code> & <code>isShortHeight</code> berperilaku wajar.</div>
+        </div>
+      </section>
+
+      <!-- ================= LAYOUT PATTERNS ================= -->
+      <section id="layouts">
+        <span class="pill-label">Responsive</span>
+        <h2>Pola Layout Adaptif</h2>
+        <p class="lead">Tiga pola layout inti yang berulang di seluruh fitur — gunakan ini sebagai cetak biru saat membangun layar baru.</p>
+
+        <h3>1. Single-pane → Two-pane (Search / Library)</h3>
+        <p>Compact: kolom tunggal (header → list → player sebagai bottom bar). Medium/Expanded atau landscape lebar: list (flex 3) berdampingan dengan player (flex 2), dipisah divider tipis 1px <code>outlineVariant @ 40%</code>.</p>
+        <div class="layout-diagram" style="margin-bottom:8px;">
+          <div class="pane full">Compact — 1 kolom (Column)</div>
+        </div>
+        <div class="layout-diagram">
+          <div class="pane list">List — flex 3</div>
+          <div class="pane player">Player — flex 2</div>
+        </div>
+
+        <h3>2. Hero + Embedded detail (Surah Detail)</h3>
+        <p>Header gradient (identitas + reciter chip + tombol play) tetap di atas; saat track aktif, panel pemutar mini muncul dengan <code>AnimatedSize</code> di antara hero dan daftar ayat — transisi halus tanpa mengganggu posisi scroll.</p>
+
+        <h3>3. Modal sheet untuk pemilihan (Reciter / Translation / Sleep timer)</h3>
+        <p>Gunakan <code>DraggableScrollableSheet</code> dengan drag-handle 40×4px, judul, kolom pencarian (jika daftar panjang), dan list dengan indikator "terpilih" (centang/ikon highlight). Pola ini konsisten antara <code>ReciterPicker</code> dan <code>_TranslationPickerSheet</code>.</p>
+      </section>
+
+      <!-- ================= COMPONENTS: HEADER ================= -->
+      <section id="comp-header">
+        <span class="pill-label">Komponen</span>
+        <h2>Hero / Header</h2>
+        <p class="lead">Anatomi: gradient brand, sudut bawah membulat 28px, logo 42×42 (radius 14), judul + subjudul, search field mengambang, dan slot "trailing" untuk aksi kontekstual (chip "Continue listening", tombol Settings).</p>
+
+        <div class="specimen">
+          <div class="preview">
+            <div class="mock-phone" style="width:320px;">
+              <div class="mock-screen" style="min-height:200px;">
+                <div class="mock-hero">
+                  <div class="row">
+                    <div class="mock-logo"></div>
+                    <div>
+                      <div class="mock-title">Quran Player</div>
+                      <div class="mock-sub">Listen to your favourite reciters</div>
+                    </div>
+                  </div>
+                  <div class="mock-search">🔍 &nbsp;Search surah or reciter…</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="meta">
+            <h4>SearchHeader — Stacked Hero</h4>
+            <p>Varian default untuk ruang vertikal cukup. Logo &amp; judul di baris atas, search field penuh di bawahnya, slot trailing diratakan kiri.</p>
+            <div class="tags"><span>Radius bottom 28px</span><span>Padding 20·top-inset+16·20·22</span><span>Search elevation 6</span><span>Auto switch → Compact Row saat isShortHeight</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= COMPONENTS: TILE ================= -->
+      <section id="comp-tile">
+        <span class="pill-label">Komponen</span>
+        <h2>List Tile (Surah)</h2>
+        <p class="lead">Kartu daftar dengan badge nomor, nama Latin + Arab sebaris, sub-info (terjemahan · jumlah ayat), dan indikator status pemutaran di kanan (bukan tombol — murni status: chevron / play-outline / equalizer / spinner).</p>
+
+        <div class="specimen">
+          <div class="preview">
+            <div class="mock-phone" style="width:320px;">
+              <div class="mock-screen" style="min-height:260px;">
+                <div class="mock-list">
+                  <div class="mock-tile active">
+                    <div class="mock-badge">1</div>
+                    <div class="lines">
+                      <div class="l1">Al-Fatihah <span class="arabic" style="font-size:13px; color:var(--on-surface-variant);">الفاتحة</span></div>
+                      <div class="l2">The Opening · 7 ayah</div>
+                    </div>
+                    <div style="color:var(--primary); font-size:16px;">▶</div>
+                  </div>
+                  <div class="mock-tile">
+                    <div class="mock-badge">2</div>
+                    <div class="lines">
+                      <div class="l1">Al-Baqarah <span class="arabic" style="font-size:13px; color:var(--on-surface-variant);">البقرة</span></div>
+                      <div class="l2">The Cow · 286 ayah</div>
+                    </div>
+                    <div class="mock-chevron">›</div>
+                  </div>
+                  <div class="mock-tile">
+                    <div class="mock-badge">3</div>
+                    <div class="lines">
+                      <div class="l1">Ali 'Imran <span class="arabic" style="font-size:13px; color:var(--on-surface-variant);">آل عمران</span></div>
+                      <div class="l2">The Family of Imran · 200 ayah</div>
+                    </div>
+                    <div class="mock-chevron">›</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="meta">
+            <h4>SurahTile</h4>
+            <p>Status aktif ditandai latar <code>primary @ 10%</code>, border <code>primary @ 40%</code>, badge bergradient, dan teks judul berwarna primary. Transisi antar-state memakai <code>AnimatedContainer</code> 180ms ease-out.</p>
+            <div class="tags"><span>Radius 20px</span><span>Badge 46×46 · radius 14</span><span>FittedBox untuk angka 3 digit</span><span>itemExtent seragam untuk performa list</span></div>
+          </div>
+        </div>
+
+        <h3>Anatomi indikator status (kanan tile)</h3>
+        <table>
+          <tr><th>State</th><th>Visual</th><th>Makna</th></tr>
+          <tr><td>Tidak aktif</td><td class="mono">chevron_right_rounded</td><td>Afforansi navigasi — "ketuk untuk membuka detail"</td></tr>
+          <tr><td>Aktif &amp; memuat</td><td class="mono">CircularProgressIndicator 22dp</td><td>Audio sedang dimuat untuk surah ini</td></tr>
+          <tr><td>Aktif &amp; berputar</td><td class="mono">equalizer_rounded</td><td>Sedang diputar saat ini</td></tr>
+          <tr><td>Aktif &amp; jeda</td><td class="mono">play_circle_outline_rounded</td><td>Track ini dipilih namun sedang dijeda</td></tr>
+        </table>
+      </section>
+
+      <!-- ================= COMPONENTS: PLAYER ================= -->
+      <section id="comp-player">
+        <span class="pill-label">Komponen</span>
+        <h2>Player Panel</h2>
+        <p class="lead">Panel kontrol pemutaran dengan gradient brand, tersedia dalam dua mode: <em>bottom bar</em> (mobile, sudut atas membulat 24px, dianimasikan masuk dari bawah) dan <em>panel mandiri</em> (panel kanan pada layout dua-kolom, radius penuh 20px).</p>
+
+        <div class="specimen">
+          <div class="preview dark">
+            <div class="mock-phone" style="width:300px;">
+              <div class="mock-screen" style="min-height:0; background:transparent;">
+                <div class="mock-player">
+                  <div class="row">
+                    <div class="art">1</div>
+                    <div class="titles">
+                      <div class="t1">Al-Fatihah</div>
+                      <div class="t2">Mishary Rashid Alafasy</div>
+                    </div>
+                    <div style="font-size:16px;">📖</div>
+                    <div style="font-size:16px;">🔖</div>
+                    <div style="font-size:16px;">✕</div>
+                  </div>
+                  <div class="mock-seek"></div>
+                  <div class="mock-times"><span>1:24</span><span>3:47</span></div>
+                  <div class="mock-controls">
+                    <div class="ghost-btn">⏮</div>
+                    <div class="ghost-btn">↺</div>
+                    <div class="primary-btn">▶</div>
+                    <div class="ghost-btn">+10</div>
+                    <div class="ghost-btn">⏭</div>
+                  </div>
+                  <div style="text-align:right; margin-top:10px;"><span class="speed-chip">1x</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="meta">
+            <h4>PlayerPanel — Header · Seek bar · Controls</h4>
+            <p>Header menampilkan badge nomor surah, judul + nama qari, dan tiga aksi (lihat ayat, bookmark, tutup). Seek bar putih di atas gradient dengan label durasi. Kontrol transport memakai <em>ghost button</em> bulat 34dp untuk aksi sekunder dan <em>primary button</em> putih 64dp (mobile) / 56dp (embedded) untuk play/pause.</p>
+            <div class="tags"><span>Masuk: SlideTransition + Fade 280ms</span><span>Resize: AnimatedSize 300ms easeInOutCubic</span><span>Speed chip: tap untuk siklus, long-press untuk menu</span><span>Error banner: latar merah 25%, radius 8</span></div>
+          </div>
+        </div>
+
+        <h3>Variasi: Embedded Player (Surah Detail)</h3>
+        <p>Versi ringkas dari panel di atas, muncul tepat di bawah hero saat surah tersebut aktif diputar — memakai overlay gradient gelap (<code>primaryDark 95%</code> → <code>primary 92%</code>) agar menyatu dengan hero di atasnya. <strong style="color:var(--on-surface)">Catatan konsistensi:</strong> standardisasi ukuran tombol (saat ini 64/56dp) dan ikon replay (<code>replay_rounded</code> vs <code>replay_10_rounded</code>) antara dua varian ini ke dalam satu widget bersama berparameter ukuran.</p>
+      </section>
+
+      <!-- ================= COMPONENTS: CARDS ================= -->
+      <section id="comp-cards">
+        <span class="pill-label">Komponen</span>
+        <h2>Quote Card &amp; Ayah Card</h2>
+        <p class="lead">Dua kartu "konten suci" dengan perlakuan visual berbeda secara sengaja: Quote Card tampil sebagai sorotan bergradient (untuk menarik perhatian di puncak daftar), Ayah Card tampil netral di atas latar polos (agar nyaman dibaca berlama-lama).</p>
+
+        <div class="grid grid-2">
+          <div class="specimen">
+            <div class="preview">
+              <div class="mock-quote" style="max-width:280px;">
+                <div class="badge">📖 Al-Fatihah • Ayah 1</div>
+                <div class="arabic">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</div>
+                <div class="tr">In the name of Allah, the Entirely Merciful, the Especially Merciful.</div>
+                <div style="border-top:1px solid rgba(255,255,255,.2); margin-top:12px; padding-top:8px; display:flex; justify-content:space-between; font-size:10px; color:rgba(255,255,255,.6);">
+                  <span>🕐 Quote of the Day</span><span style="color:#fff; font-weight:700;">Tap to read Surah →</span>
+                </div>
+              </div>
+            </div>
+            <div class="meta">
+              <h4>QuoteCard</h4>
+              <p>Kartu sorotan di puncak daftar pencarian (saat query kosong) — gradient brand, shadow lembut (blur 16, offset y 8), badge pill semi-transparan, dan footer ajakan bertindak. Seluruh kartu dapat diketuk untuk membuka surah terkait.</p>
+              <div class="tags"><span>Radius 24px</span><span>Refresh icon untuk kutipan baru</span><span>Tampil sekali di posisi index 0</span></div>
+            </div>
+          </div>
+
+          <div class="specimen">
+            <div class="preview">
+              <div class="mock-ayah" style="max-width:280px; background:rgba(15,124,90,.06); border-color:rgba(15,124,90,.3);">
+                <span class="num arabic" style="background:var(--primary); color:#fff;">﴿١﴾</span>
+                <div class="arabic" style="color:var(--primary); font-weight:600;">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</div>
+                <div class="tr">In the name of Allah, the Entirely Merciful, the Especially Merciful.</div>
+              </div>
+            </div>
+            <div class="meta">
+              <h4>AyahCard (state aktif)</h4>
+              <p>Latar belakang netral; saat ayat sedang dibacakan, kartu mendapat highlight lembut (<code>primaryContainer @ 45%</code>), nomor ayat berubah jadi solid primary, dan teks Arab menebal serta berwarna primary — penanda posisi baca yang jelas tanpa mengubah ukuran teks.</p>
+              <div class="tags"><span>Nomor ayat selalu rata kanan (konvensi mushaf)</span><span>Toggle terjemahan per-surah</span><span>Transisi 300ms saat berpindah aktif</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= COMPONENTS: CONTROLS ================= -->
+      <section id="comp-controls">
+        <span class="pill-label">Komponen</span>
+        <h2>Input, Chip &amp; Tombol</h2>
+        <p class="lead">Elemen kontrol mengikuti tema Material 3 yang dikustom lewat <code>InputDecorationTheme</code>, <code>SliderThemeData</code>, dan <code>CardThemeData</code> di <code>AppTheme</code> — radius besar &amp; border tipis sebagai ciri khas.</p>
+
+        <table>
+          <tr><th>Elemen</th><th>Spesifikasi</th><th>Konteks</th></tr>
+          <tr><td>Search / Text field</td><td class="mono">radius 18 · filled · border outlineVariant · focus border primary 1.6px · padding h18 v14</td><td>Pencarian global, pencarian terjemahan dalam sheet</td></tr>
+          <tr><td>Slider (seek bar)</td><td class="mono">trackHeight 3 · thumb &amp; active = primary (tema) atau putih (di atas gradient)</td><td>Scrubbing posisi audio</td></tr>
+          <tr><td>Chip aksi (Continue listening)</td><td class="mono">ActionChip + avatar ikon, max 1 baris ellipsis</td><td>Muncul kontekstual di header saat ada riwayat</td></tr>
+          <tr><td>Chip kecepatan</td><td class="mono">pill 999px · tap=cycle, long-press=menu · highlight saat ≠ 1.0x</td><td>Kontrol kecepatan playback (0.75×–2×)</td></tr>
+          <tr><td>Reciter chip</td><td class="mono">pill · ikon mic + label + chevron · border putih 30%</td><td>Pemicu pemilihan qari di hero detail surah</td></tr>
+          <tr><td>Meta badge</td><td class="mono">pill kecil 11px · latar putih 18% · contoh: "7 Ayahs", "Meccan"</td><td>Label metadata ringkas di hero</td></tr>
+          <tr><td>Tombol primer (Play)</td><td class="mono">lingkaran putih 56–64dp · ikon &amp; teks warna primary · elevation 4–6</td><td>CTA tunggal paling menonjol di setiap layar pemutaran</td></tr>
+          <tr><td>Ghost button</td><td class="mono">lingkaran 34–36dp · latar putih 16–18% · ikon putih</td><td>Aksi transport sekunder (skip, replay, forward)</td></tr>
+        </table>
+      </section>
+
+      <!-- ================= COMPONENTS: STATES ================= -->
+      <section id="comp-states">
+        <span class="pill-label">Komponen</span>
+        <h2>Empty &amp; Loading State</h2>
+        <p class="lead"><code>EmptyStateView</code> adalah komponen bersama untuk semua kondisi "tidak ada apa-apa untuk ditampilkan" — error jaringan, hasil pencarian kosong, maupun ajakan memilih konten. Untuk pemuatan data, gunakan shimmer skeleton yang meniru bentuk akhir konten.</p>
+
+        <div class="grid grid-2">
+          <div class="specimen">
+            <div class="preview">
+              <div class="mock-phone" style="width:260px;">
+                <div class="mock-screen" style="min-height:220px;">
+                  <div class="mock-empty">
+                    <div class="circle">🎧</div>
+                    <div class="t1">Pick a surah to play</div>
+                    <div class="t2">Select any item from the list to start listening.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="meta">
+              <h4>EmptyStateView</h4>
+              <p>Ikon dalam lingkaran lembut <code>primaryContainer @ 60%</code> (96×96), judul tegas <code>titleMedium/w700</code>, subjudul redup <code>onSurfaceVariant</code>, dan CTA opsional berupa <code>FilledButton.icon</code> dengan ikon refresh.</p>
+              <div class="tags"><span>Dipakai ulang di 4+ konteks</span><span>Konsisten untuk error & empty & hint</span></div>
+            </div>
+          </div>
+
+          <div class="specimen">
+            <div class="preview">
+              <div class="mock-phone" style="width:260px;">
+                <div class="mock-screen" style="min-height:220px;">
+                  <div class="mock-list">
+                    <div class="mock-tile" style="background:linear-gradient(90deg,#eef2f0 25%,#e3e9e6 37%,#eef2f0 63%); background-size:400% 100%; animation:shimmer 1.4s infinite;">
+                      <div class="mock-badge" style="background:transparent;"></div>
+                      <div class="lines"><div class="l1" style="color:transparent; background:#dfe6e2; border-radius:4px; width:60%;">&nbsp;</div><div class="l2" style="color:transparent; background:#e7ece9; border-radius:4px; width:40%; margin-top:6px;">&nbsp;</div></div>
+                    </div>
+                    <div class="mock-tile" style="opacity:.7;">
+                      <div class="mock-badge" style="background:#e7ece9;"></div>
+                      <div class="lines"><div class="l1" style="color:transparent; background:#e7ece9; border-radius:4px; width:50%;">&nbsp;</div><div class="l2" style="color:transparent; background:#eef2f0; border-radius:4px; width:35%; margin-top:6px;">&nbsp;</div></div>
+                    </div>
+                    <div class="mock-tile" style="opacity:.45;">
+                      <div class="mock-badge" style="background:#eef2f0;"></div>
+                      <div class="lines"><div class="l1" style="color:transparent; background:#eef2f0; border-radius:4px; width:55%;">&nbsp;</div><div class="l2" style="color:transparent; background:#f1f4f2; border-radius:4px; width:38%; margin-top:6px;">&nbsp;</div></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="meta">
+              <h4>TrackTileShimmer</h4>
+              <p>Skeleton yang meniru proporsi <code>SurahTile</code> persis (badge + dua baris teks) sehingga transisi ke konten asli terasa mulus tanpa "lompatan" tata letak (layout shift).</p>
+              <div class="tags"><span>8 placeholder saat initial load</span><span>Sama persis dimensi dgn tile final</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+      <style>@keyframes shimmer{0%{background-position:100% 0}100%{background-position:0 0}}</style>
+
+      <!-- ================= GUIDELINES ================= -->
+      <section id="guidelines">
+        <span class="pill-label">Panduan</span>
+        <h2>Prinsip Desain &amp; Ringkasan Do / Don't</h2>
+        <p class="lead">Empat prinsip yang menyimpulkan arah visual Quran Apps — gunakan sebagai "lensa" saat mengevaluasi desain layar atau komponen baru.</p>
+
+        <div class="grid grid-2">
+          <div class="card">
+            <h4>1. Tenang sebelum ramai</h4>
+            <p>Gradient brand &amp; warna emerald membawa nuansa khusyuk. Batasi elemen warna-warni/saturasi tinggi; biarkan gradient dan ruang putih (surface) menjadi fokus visual utama.</p>
+          </div>
+          <div class="card">
+            <h4>2. Konten suci mendapat perlakuan istimewa</h4>
+            <p>Teks Arab selalu RTL, berfont Scheherazade New, line-height lapang, dan penomoran ornamen. Jangan kompromi pada keterbacaan demi kepadatan tata letak.</p>
+          </div>
+          <div class="card">
+            <h4>3. Status, bukan tombol, untuk indikator pasif</h4>
+            <p><code>SurahTile</code> menunjukkan status pemutaran (chevron/equalizer/spinner) tanpa menjadikannya tombol — interaksi utama (putar) tetap eksplisit di halaman detail. Pertahankan pemisahan "lihat status" vs "lakukan aksi" ini.</p>
+          </div>
+          <div class="card">
+            <h4>4. Adaptif berdasarkan ruang, bukan perangkat</h4>
+            <p>Keputusan layout (compact row vs stacked hero, single vs two-pane) didasarkan pada <code>ResponsiveInfo</code> (lebar, tinggi, orientasi) — bukan deteksi jenis perangkat. Pertahankan pendekatan ini agar berfungsi baik di layar lipat &amp; multi-window.</p>
+          </div>
+        </div>
+
+        <h3>Ringkasan cepat</h3>
+        <div class="dd-grid">
+          <div class="dd do">
+            <div class="label">Selalu</div>
+            Gunakan token dari <code>AppTheme</code> &amp; <code>Breakpoints</code>; bungkus blok Arab dengan <code>Directionality</code>; pakai <code>EmptyStateView</code>/shimmer untuk state kosong &amp; memuat; uji di breakpoint 600/840/1200dp serta orientasi landscape pendek.
+          </div>
+          <div class="dd dont">
+            <div class="label">Jangan</div>
+            Menulis ulang gradient/radius/warna secara manual; menumpuk teks penting dengan opacity rendah di atas gradient; membatasi tinggi baris teks Arab demi memuat lebih banyak konten; mengabaikan <code>contentMaxWidth</code> pada layar lebar.
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <footer>
+      <span>Quran Apps · UI/UX Style Guide — disusun dari audit kode di <code>lib/core/theme</code>, <code>lib/core/responsive</code>, dan <code>lib/features/*</code>.</span>
+      <span>Dioptimalkan untuk compact / medium / expanded · light &amp; dark mode</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+  const toggle = document.getElementById('navToggle');
+  const sidebar = document.getElementById('sidebar');
+  toggle.addEventListener('click', () => sidebar.classList.toggle('open'));
+  document.querySelectorAll('.sidebar nav a').forEach(a => {
+    a.addEventListener('click', () => sidebar.classList.remove('open'));
+  });
+  document.addEventListener('click', (e) => {
+    if (window.innerWidth <= 920 && sidebar.classList.contains('open') &&
+        !sidebar.contains(e.target) && e.target !== toggle) {
+      sidebar.classList.remove('open');
+    }
+  });
+</script>
+</body>
+</html>

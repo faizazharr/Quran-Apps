@@ -1,0 +1,2244 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quran Player — Laporan Analisa & Improvement</title>
+  <style>
+    :root {
+      --green:       #0F7C5A;
+      --green-dark:  #0A4D38;
+      --green-light: #e6f4ef;
+      --gold:        #E5B25D;
+      --red:         #d93025;
+      --red-light:   #fce8e6;
+      --orange:      #f4811f;
+      --orange-light:#fef3e2;
+      --blue:        #1a73e8;
+      --blue-light:  #e8f0fe;
+      --text:        #1a1a2e;
+      --text-2:      #4a5568;
+      --border:      #e2e8f0;
+      --bg:          #f8fafb;
+      --white:       #ffffff;
+      --card-shadow: 0 2px 12px rgba(0,0,0,.07);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+    }
+
+    /* ── HEADER ── */
+    .hero {
+      background: linear-gradient(135deg, var(--green) 0%, var(--green-dark) 100%);
+      color: #fff;
+      padding: 52px 40px 48px;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '﴿ قُرْآن ﴾';
+      position: absolute; right: 40px; top: 50%;
+      transform: translateY(-50%);
+      font-size: 80px; opacity: .12;
+      font-family: serif;
+      pointer-events: none;
+    }
+    .hero h1 { font-size: 2rem; font-weight: 800; margin-bottom: 6px; }
+    .hero .subtitle { opacity: .85; font-size: 1rem; max-width: 560px; }
+    .hero .meta {
+      margin-top: 20px; display: flex; gap: 20px; flex-wrap: wrap;
+    }
+    .hero .badge {
+      background: rgba(255,255,255,.18);
+      border-radius: 20px; padding: 4px 14px;
+      font-size: .82rem; font-weight: 600;
+    }
+
+    /* ── LAYOUT ── */
+    .container { max-width: 980px; margin: 0 auto; padding: 0 24px; }
+
+    /* ── SUMMARY CARDS ── */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px; margin: 36px 0 12px;
+    }
+    .summary-card {
+      background: var(--white); border-radius: 16px;
+      padding: 20px 22px; box-shadow: var(--card-shadow);
+      border-left: 4px solid var(--green);
+    }
+    .summary-card.red   { border-color: var(--red); }
+    .summary-card.orange{ border-color: var(--orange); }
+    .summary-card.blue  { border-color: var(--blue); }
+    .summary-card .num  { font-size: 2.2rem; font-weight: 800; line-height: 1; }
+    .summary-card .label{ font-size: .78rem; color: var(--text-2); margin-top: 4px; text-transform: uppercase; letter-spacing: .5px; }
+
+    /* ── SECTION ── */
+    .section { margin: 44px 0; }
+    .section-title {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 1.25rem; font-weight: 800;
+      color: var(--green-dark); margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid var(--green-light);
+    }
+    .section-title .icon {
+      width: 34px; height: 34px;
+      background: var(--green-light);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; flex-shrink: 0;
+    }
+
+    /* ── ISSUE CARD ── */
+    .issue-card {
+      background: var(--white); border-radius: 16px;
+      box-shadow: var(--card-shadow);
+      margin-bottom: 18px; overflow: hidden;
+    }
+    .issue-header {
+      display: flex; align-items: flex-start; gap: 14px;
+      padding: 18px 20px 14px;
+    }
+    .severity-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      flex-shrink: 0; margin-top: 6px;
+    }
+    .sev-critical { background: var(--red); }
+    .sev-high     { background: var(--orange); }
+    .sev-medium   { background: var(--blue); }
+    .sev-low      { background: #9e9e9e; }
+
+    .issue-title { font-weight: 700; font-size: 1rem; margin-bottom: 4px; }
+    .issue-desc  { font-size: .88rem; color: var(--text-2); line-height: 1.6; }
+
+    .issue-body { padding: 0 20px 18px; }
+
+    .tag {
+      display: inline-block;
+      font-size: .72rem; font-weight: 700;
+      border-radius: 6px; padding: 2px 9px;
+      text-transform: uppercase; letter-spacing: .4px;
+      margin-right: 6px; margin-bottom: 6px;
+    }
+    .tag-critical { background: var(--red-light);    color: var(--red);    }
+    .tag-high     { background: var(--orange-light); color: var(--orange); }
+    .tag-medium   { background: var(--blue-light);   color: var(--blue);   }
+    .tag-ux       { background: #f3e8ff; color: #7c3aed; }
+    .tag-perf     { background: #ecfdf5; color: #065f46; }
+    .tag-feature  { background: #eff6ff; color: #1d4ed8; }
+    .tag-bug      { background: #fff1f2; color: #be123c; }
+
+    .code-ref {
+      font-family: 'Courier New', Courier, monospace;
+      background: #f1f5f9; border-radius: 6px;
+      padding: 2px 7px; font-size: .8rem; color: #334155;
+    }
+
+    .rec-block {
+      background: var(--green-light);
+      border-radius: 10px; padding: 12px 16px;
+      margin-top: 12px;
+      font-size: .87rem;
+    }
+    .rec-block strong { color: var(--green-dark); }
+
+    .code-snippet {
+      background: #1e293b; color: #e2e8f0;
+      border-radius: 10px; padding: 14px 16px;
+      font-size: .8rem; font-family: 'Courier New', Courier, monospace;
+      line-height: 1.7; margin-top: 12px; overflow-x: auto;
+    }
+    .code-snippet .comment { color: #64748b; }
+    .code-snippet .kw      { color: #7dd3fc; }
+    .code-snippet .fn      { color: #a5f3fc; }
+    .code-snippet .str     { color: #86efac; }
+
+    /* ── PRIORITY TABLE ── */
+    .priority-table {
+      width: 100%; border-collapse: collapse;
+      font-size: .88rem; background: var(--white);
+      border-radius: 14px; overflow: hidden;
+      box-shadow: var(--card-shadow);
+    }
+    .priority-table th {
+      background: var(--green-dark); color: #fff;
+      padding: 12px 16px; text-align: left;
+      font-weight: 700; font-size: .8rem;
+      text-transform: uppercase; letter-spacing: .5px;
+    }
+    .priority-table td {
+      padding: 11px 16px; border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    .priority-table tr:last-child td { border-bottom: none; }
+    .priority-table tr:hover td { background: #f8fafc; }
+    .pill {
+      display: inline-block; border-radius: 12px;
+      padding: 2px 10px; font-size: .75rem; font-weight: 700;
+    }
+    .pill-p1 { background: #fef2f2; color: #dc2626; }
+    .pill-p2 { background: #fff7ed; color: #c2410c; }
+    .pill-p3 { background: #eff6ff; color: #1d4ed8; }
+    .pill-p4 { background: #f0fdf4; color: #15803d; }
+
+    /* ── FEATURE WISHLIST ── */
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 14px;
+    }
+    .feature-card {
+      background: var(--white); border-radius: 14px;
+      padding: 18px 18px 16px; box-shadow: var(--card-shadow);
+      border-top: 3px solid var(--blue);
+    }
+    .feature-card.gold { border-color: var(--gold); }
+    .feature-card h4 { font-size: .95rem; font-weight: 700; margin-bottom: 6px; }
+    .feature-card p  { font-size: .84rem; color: var(--text-2); line-height: 1.55; }
+
+    /* ── ARCHITECTURE ── */
+    .arch-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 14px; margin-top: 4px;
+    }
+    .arch-card {
+      background: var(--white); border-radius: 14px;
+      padding: 16px 18px; box-shadow: var(--card-shadow);
+    }
+    .arch-card .arch-label {
+      font-size: .72rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .6px; color: var(--green); margin-bottom: 6px;
+    }
+    .arch-card h4 { font-size: .92rem; font-weight: 700; margin-bottom: 4px; }
+    .arch-card p  { font-size: .82rem; color: var(--text-2); }
+
+    /* ── FOOTER ── */
+    footer {
+      background: var(--green-dark); color: rgba(255,255,255,.7);
+      text-align: center; padding: 24px;
+      font-size: .82rem; margin-top: 60px;
+    }
+    footer strong { color: #fff; }
+
+    /* ── MISC ── */
+    .divider { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
+    .toc { background: var(--white); border-radius: 14px; padding: 22px 24px; box-shadow: var(--card-shadow); margin: 28px 0; }
+    .toc h3 { font-size: .9rem; font-weight: 700; color: var(--green-dark); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 12px; }
+    .toc ol { padding-left: 18px; }
+    .toc li { font-size: .88rem; margin-bottom: 6px; }
+    .toc a  { color: var(--green); text-decoration: none; font-weight: 600; }
+    .toc a:hover { text-decoration: underline; }
+
+    /* ── SOLID BADGES ── */
+    .solid-badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 28px; height: 28px; border-radius: 8px;
+      font-size: .75rem; font-weight: 900; flex-shrink: 0;
+      letter-spacing: -.5px;
+    }
+    .solid-s  { background: #fef3c7; color: #92400e; }
+    .solid-o  { background: #fee2e2; color: #991b1b; }
+    .solid-l  { background: #ede9fe; color: #5b21b6; }
+    .solid-i  { background: #dbeafe; color: #1e40af; }
+    .solid-d  { background: #dcfce7; color: #166534; }
+    .solid-oop{ background: #f1f5f9; color: #334155; }
+
+    .solid-row {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 14px 18px; border-bottom: 1px solid var(--border);
+    }
+    .solid-row:last-child { border-bottom: none; }
+    .solid-row-body { flex: 1; min-width: 0; }
+    .solid-row-title { font-weight: 700; font-size: .92rem; margin-bottom: 3px; }
+    .solid-row-desc  { font-size: .84rem; color: var(--text-2); line-height: 1.6; }
+
+    .solid-section {
+      background: var(--white); border-radius: 16px;
+      box-shadow: var(--card-shadow); overflow: hidden;
+      margin-bottom: 28px;
+    }
+    .solid-section-header {
+      background: #1e293b; color: #f8fafc;
+      padding: 12px 18px; font-weight: 800; font-size: .9rem;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .solid-section-header .principle-name {
+      font-size: 1rem; color: var(--gold); font-weight: 900;
+    }
+
+    .before-after {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+      margin-top: 10px;
+    }
+    .before-after .code-snippet { margin-top: 0; }
+    .ba-label {
+      font-size: .72rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .5px; margin-bottom: 4px;
+    }
+    .ba-before .ba-label { color: #dc2626; }
+    .ba-after  .ba-label { color: #16a34a; }
+
+    @media (max-width: 700px) {
+      .before-after { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 600px) {
+      .hero { padding: 36px 20px 32px; }
+      .hero::before { display: none; }
+      .container { padding: 0 16px; }
+      .summary-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════ HERO ═══════════ -->
+<div class="hero">
+  <div class="container">
+    <h1>📋 Quran Player — Laporan Analisa &amp; Improvement</h1>
+    <p class="subtitle">Analisa mendalam terhadap usability, performa, dan potensi fitur baru berdasarkan code review lengkap.</p>
+    <div class="meta">
+      <span class="badge">Flutter • Dart</span>
+      <span class="badge">BLoC Pattern</span>
+      <span class="badge">Clean Architecture</span>
+      <span class="badge">Material 3</span>
+      <span class="badge">📅 Juni 2026</span>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- SUMMARY -->
+  <div class="summary-grid">
+    <div class="summary-card red">
+      <div class="num">2</div>
+      <div class="label">Bug / Potensi Crash</div>
+    </div>
+    <div class="summary-card orange">
+      <div class="num">5</div>
+      <div class="label">Isu Performa</div>
+    </div>
+    <div class="summary-card">
+      <div class="num">7</div>
+      <div class="label">Isu Usability</div>
+    </div>
+    <div class="summary-card blue">
+      <div class="num">16</div>
+      <div class="label">Fitur yang Disarankan</div>
+    </div>
+  </div>
+
+  <!-- TOC -->
+  <div class="toc">
+    <h3>📑 Daftar Isi</h3>
+    <ol>
+      <li><a href="#overview">Ringkasan Arsitektur</a></li>
+      <li><a href="#bugs">Bug &amp; Risiko Potensial</a></li>
+      <li><a href="#performance">Isu Performa</a></li>
+      <li><a href="#usability">Isu Usability</a></li>
+      <li><a href="#features">Fitur yang Disarankan</a></li>
+      <li><a href="#local-storage">Fitur Local Storage (Offline-First)</a></li>
+      <li><a href="#solid">Upgrade OOP &amp; Prinsip SOLID</a></li>
+      <li><a href="#priority">Tabel Prioritas</a></li>
+    </ol>
+  </div>
+
+  <!-- ═══ SECTION 1: ARSITEKTUR ═══ -->
+  <div class="section" id="overview">
+    <div class="section-title">
+      <div class="icon">🏗️</div>
+      Ringkasan Arsitektur
+    </div>
+    <div class="arch-grid">
+      <div class="arch-card">
+        <div class="arch-label">State Management</div>
+        <h4>flutter_bloc v9</h4>
+        <p>BLoC per fitur dengan event/state yang terdefinisi baik. Penggunaan <span class="code-ref">sealed class</span> untuk events sudah modern.</p>
+      </div>
+      <div class="arch-card">
+        <div class="arch-label">Dependency Injection</div>
+        <h4>get_it + service locator</h4>
+        <p>Semua dependency di-register di <span class="code-ref">service_locator.dart</span>. Abstrak via interface (IQuranRepository, dst).</p>
+      </div>
+      <div class="arch-card">
+        <div class="arch-label">Data Layer</div>
+        <h4>Cache-first + offline</h4>
+        <p>SQLite (sqflite) untuk cache lokal. Network client dengan HTTPS enforcement, timeout, dan max response size.</p>
+      </div>
+      <div class="arch-card">
+        <div class="arch-label">Audio</div>
+        <h4>just_audio + background</h4>
+        <p>LockCachingAudioSource untuk streaming + cache offline otomatis. Mendukung lock screen controls.</p>
+      </div>
+      <div class="arch-card">
+        <div class="arch-label">Responsive</div>
+        <h4>Two-pane layout</h4>
+        <p>Breakpoint-aware: compact (phone) → two-pane (tablet/landscape). Menggunakan Material 3 breakpoints.</p>
+      </div>
+      <div class="arch-card">
+        <div class="arch-label">Localization</div>
+        <h4>EN + ID (ARB)</h4>
+        <p>Flutter gen-l10n dengan file <span class="code-ref">.arb</span>. Locale bisa diset manual atau follow device.</p>
+      </div>
+    </div>
+    <div class="rec-block" style="margin-top: 16px;">
+      <strong>✅ Kekuatan:</strong> Arsitektur sudah sangat bersih, layer separation jelas (data/feature/core/shared), interface-driven sehingga mudah di-test dan di-swap implementasinya.
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  <!-- ═══ SECTION 2: BUG ═══ -->
+  <div class="section" id="bugs">
+    <div class="section-title">
+      <div class="icon">🐛</div>
+      Bug &amp; Risiko Potensial
+    </div>
+
+    <!-- Bug 1 -->
+    <div class="issue-card">
+      <div class="issue-header">
+        <div class="severity-dot sev-critical"></div>
+        <div>
+          <div class="issue-title">
+            <span class="tag tag-bug">Bug</span>
+            <span class="tag tag-critical">Critical</span>
+            Sleep Timer "End of Surah" tidak pernah ter-trigger
+          </div>
+          <div class="issue-desc">
+            <span class="code-ref">SleepTimerBloc</span> memiliki opsi <span class="code-ref">SleepTimerOption.endOfSurah</span>, namun komentar di code menyatakan <em>"The caller is responsible for firing SleepTimerCancelled when playback completes."</em> Masalahnya: tidak ada kode di <span class="code-ref">PlayerBloc</span> atau listener manapun yang memanggil event ini ketika <span class="code-ref">PlaybackStatus.completed</span> tercapai. Fitur ini <strong>tidak berfungsi</strong>.
+          </div>
+        </div>
+      </div>
+      <div class="issue-body">
+        <strong>File terkait:</strong>
+        <span class="code-ref">lib/features/sleep_timer/bloc/sleep_timer_bloc.dart</span> •
+        <span class="code-ref">lib/app.dart</span> (SleepTimerBloc listener)
+        <div class="code-snippet">
+<span class="comment">// Di app.dart — hanya menangkap status 'expired', bukan trigger-nya</span><br>
+BlocListener&lt;SleepTimerBloc, SleepTimerState&gt;(<br>
+&nbsp;&nbsp;listenWhen: (prev, curr) =&gt; curr.status == SleepTimerStatus.expired,<br>
+&nbsp;&nbsp;listener: (ctx, _) =&gt; ctx.read&lt;PlayerBloc&gt;()<br>
+&nbsp;&nbsp;&nbsp;&nbsp;.add(PlayerPauseRequested()),<br>
+&nbsp;&nbsp;<span class="comment">// ⚠️ Tidak ada listener di PlayerBloc untuk completed → SleepTimerCancelled</span><br>
+)
+        </div>
+        <div class="rec-block">
+          <strong>Fix:</strong> Di <span class="code-ref">app.dart</span>, tambahkan BlocListener kedua yang memantau <span class="code-ref">PlayerBloc</span>: ketika status menjadi <span class="code-ref">PlaybackStatus.completed</span> DAN sleep timer aktif dengan opsi <span class="code-ref">endOfSurah</span>, panggil <span class="code-ref">SleepTimerCancelled()</span> dan <span class="code-ref">PlayerPauseRequested()</span>.
+        </div>
+      </div>
+    </div>
+
+    <!-- Bug 2 -->
+    <div class="issue-card">
+      <div class="issue-header">
+        <div class="severity-dot sev-high"></div>
+        <div>
+          <div class="issue-title">
+            <span class="tag tag-bug">Bug</span>
+            <span class="tag tag-high">High</span>
+            Download progress memukul database SQLite pada setiap chunk data
+          </div>
+          <div class="issue-desc">
+            Di <span class="code-ref">DownloadServiceImpl._startDownload()</span>, method <span class="code-ref">_updateProgress()</span> dan <span class="code-ref">_notifyListeners()</span> dipanggil di dalam loop <span class="code-ref">await for (final chunk in response.stream)</span>. Setiap chunk (bisa ratusan per detik) melakukan 1 <strong>DB write</strong> + 1 <strong>DB read penuh</strong> (<span class="code-ref">getAll()</span>). Ini dapat menyebabkan UI jank parah dan database lock pada perangkat lemah.
+          </div>
+        </div>
+      </div>
+      <div class="issue-body">
+        <strong>File terkait:</strong> <span class="code-ref">lib/data/services/download_service_impl.dart</span> (baris loop stream)
+        <div class="code-snippet">
+<span class="comment">// ⚠️ Kode saat ini — DB write + read tiap chunk!</span><br>
+<span class="kw">await for</span> (<span class="kw">final</span> chunk <span class="kw">in</span> response.stream) {<br>
+&nbsp;&nbsp;sink.add(chunk);<br>
+&nbsp;&nbsp;received += chunk.length;<br>
+&nbsp;&nbsp;<span class="kw">final</span> progress = received / total;<br>
+&nbsp;&nbsp;<span class="kw">await</span> _updateProgress(...);    <span class="comment">// DB WRITE setiap chunk</span><br>
+&nbsp;&nbsp;_notifyListeners();            <span class="comment">// getAll() = DB READ setiap chunk</span><br>
+}<br><br>
+<span class="comment">// ✅ Fix: throttle update setiap 5% atau setiap 500ms</span><br>
+<span class="kw">var</span> lastNotifyTime = DateTime.now();<br>
+<span class="kw">var</span> lastProgress = 0.0;<br>
+<span class="kw">await for</span> (<span class="kw">final</span> chunk <span class="kw">in</span> response.stream) {<br>
+&nbsp;&nbsp;sink.add(chunk); received += chunk.length;<br>
+&nbsp;&nbsp;<span class="kw">final</span> progress = received / total;<br>
+&nbsp;&nbsp;<span class="kw">final</span> diff = progress - lastProgress;<br>
+&nbsp;&nbsp;<span class="kw">final</span> elapsed = DateTime.now().difference(lastNotifyTime);<br>
+&nbsp;&nbsp;<span class="kw">if</span> (diff &gt;= 0.05 || elapsed.inMilliseconds &gt;= 500) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">await</span> _updateProgress(...);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;_notifyListeners();<br>
+&nbsp;&nbsp;&nbsp;&nbsp;lastProgress = progress;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;lastNotifyTime = DateTime.now();<br>
+&nbsp;&nbsp;}<br>
+}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  <!-- ═══ SECTION 3: PERFORMANCE ═══ -->
+  <div class="section" id="performance">
+    <div class="section-title">
+      <div class="icon">⚡</div>
+      Isu Performa
+    </div>
+
+    <!-- Perf 1 -->
+    <div class="issue-card">
+      <div class="issue-header">
+        <div class="severity-dot sev-high"></div>
+        <div>
+          <div class="issue-title">
+            <span class="tag tag-perf">Performance</span>
+            <span class="tag tag-high">High</span>
+            AyahView scroll tidak di-debounce — <code>AyahLoadMoreRequested</code> bisa terfired berkali-kali
+          </div>
+          <div class="issue-desc">
+            Method <span class="code-ref">_onScroll()</span> di <span class="code-ref">AyahView</span> langsung memanggil <span class="code-ref">bloc.add(AyahLoadMoreRequested())</span> setiap kali scroll event masuk dan posisi kurang dari 300px dari bawah. Scroll cepat bisa mengirim puluhan event identik dalam hitungan milidetik, menyebabkan banyak network request duplikat.
+          </div>
+        </div>
+      </div>
+      <div class="issue-body">
+        <strong>File:</strong> <span class="code-ref">lib/features/ayah/view/ayah_view.dart</span>
+        <div class="rec-block">
+          <strong>Fix:</strong> Terapkan pola yang sama dengan <span class="code-ref">_ListPaneState._onScroll()</span> di search_screen.dart — gunakan <span class="code-ref">Timer _scrollDebounce</span> dengan delay 200ms, dan guard dengan flag <span class="code-ref">isLoadingMore</span> di AyahState untuk mencegah double-load.
+        </div>
+      </div>
+    </div>
+
+    <!-- Perf 2 -->
+    <div class="issue-card">
+      <div class="issue-header">
+        <div class="severity-dot sev-high"></div>
+        <div>
+          <div class="issue-title">
+            <span class="tag tag-perf">Performance</span>
+            <span class="tag tag-high">High</span>
+            PlayerBloc menerima position stream setiap ~200ms — rebuild terlalu sering
+          </div>
+          <div class="issue-desc">
+            <span class="code-ref">PlayerBloc</span> subscribe ke 3 stream sekaligus (<span class="code-ref">positionStream</span>, <span class="code-ref">durationStream</span>, <span class="code-ref">playbackStream</span>). Position stream dari <span class="code-ref">just_audio</span> default fire setiap ~200ms saat playing. Setiap emit memanggil <span class="code-ref">add(_PlayerPositionUpdated)</span> yang membuat event baru di BLoC queue — sekitar 5 event/detik. Ini normal untuk seekbar, tapi semua subscriber PlayerBloc ikut re-evaluate.
+          </div>
+        </div>
+      </div>
+      <div class="issue-body">
+        <strong>File:</strong> <span class="code-ref">lib/features/player/bloc/player_bloc.dart</span>
+        <div class="rec-block">
+          <strong>Sudah dimitigasi sebagian</strong> dengan <span class="code-ref">BlocSelector</span> + view-model di player_panel.dart. Namun bisa dioptimalkan lebih lanjut dengan men-throttle position stream di service level:
+          <br><br>
+          <span class="code-ref">get positionStream => _player.positionStream.distinct().throttleTime(Duration(milliseconds: 250));</span>
+          <br><br>
+          Tambahkan paket <span class="code-ref">rxdart</span> atau implementasi throttle manual.
+        </div>
+      </div>
+    </div>
+
+    <!-- Perf 3 -->
+    <div class="issue-card">
+      <div class="issue-header">
+        <div class="severity-dot sev-medium"></div>
+        <div>
+          <div class="issue-title">
+            <span class="tag tag-perf">Performance</span>
+            <span class="tag tag-medium">Medium</span>
+            SearchBloc debounce menggunakan pola Completer yang tidak lazim
+          </div>
+          <div class="issue-desc">
+            Di <span class="code-ref">SearchBloc._onQueryChanged()</span>, digunakan <span class="code-ref">Completer</span> manual untuk menunggu debounce Timer — ini membuat setiap event membuat Completer baru yang tidak akan pernah di-cancel jika event berikutnya datang. Meski tidak crash, ada memory allocation yang tidak perlu dan potensi kebocoran jika debounce dicancel tapi completer tidak di-complete.
+          </div>
+        </div>
+      </div>
+      <div class="issue-body">
+        <strong>File:</strong> <span class="code-ref">lib/features/search/bloc/search_bloc.dart</span>
+        <div class="rec-block">
+          <strong>Saran:</strong> Gunakan transformer <span class="code-ref">debounceTime</span> dari <span class="code-ref">rxdart</span> atau gunakan pola yang lebih sederhana: cukup simpan query terakhir dan cek di dalam callback Timer apakah query masih sama sebelum emit.
+        </div>
+      </div>
+    </div>
+
+    <!-- Perf 4 -->
+    <div class="issue-card">
+      <div class="issue-header">
+        <div class="severity-dot sev-medium"></div>
+        <div>
+          <div class="issue-title">
+            <span class="tag tag-perf">Performance</span>
+            <span class="tag tag-medium">Medium</span>
+            "Continue Listening" chip menggunakan linear search O(n) tiap tap
+          </div>
+          <div class="issue-desc">
+            Di <span class="code-ref">_HeaderActions</span> dalam search_screen.dart, ketika chip ditekan, code melakukan <span class="code-ref">searchState.surahs.firstWhere(...)</span> dan <span class="code-ref">searchState.reciters.firstWhere(...)</span>. Untuk 114 surah ini trivial, tapi pola ini tetap bisa dioptimalkan dengan Map lookup O(1) yang disiapkan di BLoC state.
+          </div>
+        </div>
+      </div>
+      <div class="issue-body">
+        <div class="rec-block">
+          <strong>Saran:</strong> Tambahkan getter di <span class="code-ref">SearchState</span>: <span class="code-ref">Map&lt;int, Surah&gt; get surahMap</span> yang computed sekali dari list. Gunakan <span class="code-ref">surahMap[lp.surahNumber]</span> untuk lookup O(1).
+        </div>
+      </div>
+    </div>
+
+    <!-- Perf 5 -->
+    <div class="issue-card">
+      <div class="issue-header">
+        <div class="severity-dot sev-medium"></div>
+        <div>
+          <div class="issue-title">
+            <span class="tag tag-perf">Performance</span>
+            <span class="tag tag-medium">Medium</span>
+            SurahTile tidak menggunakan <code>itemExtent</code> meski komentar menyebutnya
+          </div>
+          <div class="issue-desc">
+            Komentar di <span class="code-ref">SurahTile</span> menyebutkan <em>"All tiles have a fixed layout height of 76 px so the parent ListView can use itemExtent"</em>, namun di <span class="code-ref">_ResultsList</span> dalam search_screen.dart, <span class="code-ref">ListView.builder</span> tidak menggunakan <span class="code-ref">itemExtent</span>. Tanpa ini, Flutter tetap harus melakukan layout measurement per tile meski ukurannya sudah dideklarasikan konstan.
+          </div>
+        </div>
+      </div>
+      <div class="issue-body">
+        <strong>File:</strong> <span class="code-ref">lib/features/search/view/search_screen.dart</span>
+        <div class="code-snippet">
+<span class="comment">// ✅ Tambahkan ini ke ListView.builder di _ResultsList</span><br>
+ListView.builder(<br>
+&nbsp;&nbsp;controller: scrollController,<br>
+&nbsp;&nbsp;<span class="str">itemExtent: 86,</span> <span class="comment">// 76px tile + 10px padding vertical</span><br>
+&nbsp;&nbsp;addRepaintBoundaries: <span class="kw">false</span>, <span class="comment">// sudah pakai RepaintBoundary manual</span><br>
+&nbsp;&nbsp;...<br>
+)
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  <!-- ═══ SECTION 4: USABILITY ═══ -->
+  <div class="section" id="usability">
+    <div class="section-title">
+      <div class="icon">🎯</div>
+      Isu Usability
+    </div>
+
+    <!-- UX 1 -->
+    <div class="issue-card">
+      <div class="issue-header">
+        <div class="severity-dot sev-high"></div>
+        <div>
+          <div class="issue-title">
+            <span class="tag tag-ux">UX</span>
+            <span class="tag tag-high">High Impact</span>
+            Reciter picker muncul setiap kali tap surah — mengganggu alur cepat
+          </div>
+          <div class="issue-desc">
+            Setiap kali user mengetuk surah, modal reciter picker selalu muncul — bahkan jika reciter yang diinginkan sama seperti sebelumnya. Ini memperlambat alur "tap to play" menjadi 2 langkah wajib.
+          </div>
+        </div>
+      </div>
+      <div class="issue-body">
+        <div class="rec-block">
+          <strong>Rekomendasi:</strong> Jika <span class="code-ref">searchState.selectedReciter != null</span>, langsung play dengan reciter tersebut tanpa menampilkan picker. Tampilkan reciter saat ini sebagai badge kecil di sebelah kanan surah tile. Hanya tampilkan picker jika user long-press atau tekan ikon reciter secara eksplisit.
+        </div>
+      </div>
+    </div>
+
+    <!-- UX 2 -->
+    <div class="issue-card">
+      <div class="issue-header">
+        <div class="severity-dot sev-high"></div>
+        <div>
+          <div class="issue-title">
+            <span class="tag tag-ux">UX</span>
+            <span class="tag tag-high">High Impact</span>
+            Bookmark tertanam di Settings — tidak intuitif dan sulit ditemukan
+          </div>
+          <div class="issue-desc">
+            Daftar bookmark dan fungsi "tambah bookmark" tersembunyi di dalam halaman Settings. User tidak dapat langsung membookmark surah yang sedang diputar, dan melihat bookmark memerlukan navigasi ke Settings → Bookmarks.
+          </div>
+        </div>
+      </div>
+      <div class="issue-body">
+        <div class="rec-block">
+          <strong>Rekomendasi:</strong> Pindahkan bookmark ke dedicated screen atau bottom sheet yang bisa diakses dari player panel (ikon bookmark di header). Tambahkan tombol bookmark di <span class="code-ref">PlayerPanel._Header</span> (sejajar tombol ayah & close) yang langsung memanggil <span class="code-ref">BookmarkAddRequested</span>.
+        </div>
+      </div>
+    </div>
+
+    <!-- UX 3 -->
+    <div class="issue-card">
+      <div class="issue-header">
+        <div class="severity-dot sev-medium"></div>
+        <div>
+          <div class="issue-title">
+            <span class="tag tag-ux">UX</span>
+            <span class="tag tag-medium">Medium</span>
+            Speed chip: long-press untuk menu tidak discoverable
+          </div>
+          <div class="issue-desc">
+            Fitur long-press pada <span class="code-ref">_SpeedChip</span> untuk memilih kecepatan langsung tidak memiliki affordance visual. User baru tidak akan tahu ada menu tersembunyi di sana.
+          </div>
+        </div>
+      </div>
+      <div class="issue-body">
+        <div class="rec-block">
+          <strong>Rekomendasi:</strong> Ganti dengan <span class="code-ref">DropdownButton</span> atau <span class="code-ref">PopupMenuButton</span> yang menampilkan ikon dropdown kecil, atau tambahkan tooltip "Hold to pick speed" saat pertama kali player dibuka.
+        </div>
+      </div>
+    </div>
+
+    <!-- UX 4 -->
+    <div class="issue-card">
+      <div class="issue-header">
+        <div class="severity-dot sev-medium"></div>
+        <div>
+          <div class="issue-title">
+            <span class="tag tag-ux">UX</span>
+            <span class="tag tag-medium">Medium</span>
+            AyahView tidak menampilkan nama Surah dengan benar
+          </div>
+          <div class="issue-desc">
+            Header AyahView hanya menampilkan <em>"Surah [number]"</em> (nomor) tanpa nama surah. Jika <span class="code-ref">ayahs.isNotEmpty</span>, nomor surah bisa didapat tapi nama Inggris/Arab tidak ditampilkan. Juga tidak ada informasi juz atau jumlah total ayah.
+          </div>
+        </div>
+      </div>
+      <div class="issue-body">
+        <div class="rec-block">
+          <strong>Rekomendasi:</strong> Simpan data Surah lengkap di AyahState (bukan hanya ayah items), lalu tampilkan <span class="code-ref">"Al-Fatihah • Surah 1 • 7 Ayah"</span> di header. Tambahkan nama Arab di sebelah kanan.
+        </div>
+      </div>
+    </div>
+
+    <!-- UX 5 -->
+    <div class="issue-card">
+      <div class="issue-header">
+        <div class="severity-dot sev-medium"></div>
+        <div>
+          <div class="issue-title">
+            <span class="tag tag-ux">UX</span>
+            <span class="tag tag-medium">Medium</span>
+            Tidak ada indikator status offline yang terlihat oleh user
+          </div>
+          <div class="issue-desc">
+            App sudah mendeteksi koneksi via <span class="code-ref">ConnectivityService</span> dan melempar <span class="code-ref">OfflineException</span>, tapi tidak ada banner atau snackbar yang memberi tahu user secara proaktif saat koneksi terputus/pulih.
+          </div>
+        </div>
+      </div>
+      <div class="issue-body">
+        <div class="rec-block">
+          <strong>Rekomendasi:</strong> Tambahkan <span class="code-ref">StreamBuilder</span> atau <span class="code-ref">BlocListener</span> di root app yang memantau <span class="code-ref">ConnectivityService.onConnectivityChanged</span> dan menampilkan <span class="code-ref">SnackBar</span> "Offline — Menggunakan data cache" / "Kembali online" sesuai kondisi.
+        </div>
+      </div>
+    </div>
+
+    <!-- UX 6 -->
+    <div class="issue-card">
+      <div class="issue-header">
+        <div class="severity-dot sev-medium"></div>
+        <div>
+          <div class="issue-title">
+            <span class="tag tag-ux">UX</span>
+            <span class="tag tag-medium">Medium</span>
+            Tidak ada tombol "Next/Previous Surah" di player panel
+          </div>
+          <div class="issue-desc">
+            Setelah satu surah selesai, player berhenti (<span class="code-ref">PlaybackStatus.completed</span>) dan user harus kembali ke list untuk memilih surah berikutnya. Tidak ada navigasi antar surah dari player itu sendiri.
+          </div>
+        </div>
+      </div>
+      <div class="issue-body">
+        <div class="rec-block">
+          <strong>Rekomendasi:</strong> Tambahkan event <span class="code-ref">PlayerNextRequested</span> / <span class="code-ref">PlayerPreviousRequested</span> ke PlayerBloc. Player bloc perlu referensi ke SearchBloc state (via constructor injection atau event parameter) untuk mengetahui surah mana yang "next". Auto-play next saat <span class="code-ref">PlaybackStatus.completed</span> bisa dijadikan opsi di Settings.
+        </div>
+      </div>
+    </div>
+
+    <!-- UX 7 -->
+    <div class="issue-card">
+      <div class="issue-header">
+        <div class="severity-dot sev-low"></div>
+        <div>
+          <div class="issue-title">
+            <span class="tag tag-ux">UX</span>
+            Label bookmark di Settings hanya menampilkan nomor surah
+          </div>
+          <div class="issue-desc">
+            Item bookmark menampilkan <em>"Surah 1"</em> dan edition ID mentah seperti <em>"ar.alafasy"</em> — bukan nama yang user-friendly. User tidak bisa langsung tahu surah mana yang di-bookmark.
+          </div>
+        </div>
+      </div>
+      <div class="issue-body">
+        <div class="rec-block">
+          <strong>Rekomendasi:</strong> Enrichment bookmark data saat load: join dengan surah list untuk mendapatkan nama Inggris, dan format edition ID menjadi nama qori yang terbaca (misalnya "ar.alafasy" → "Mishary Alafasy").
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  <!-- ═══ SECTION 5: FEATURES ═══ -->
+  <div class="section" id="features">
+    <div class="section-title">
+      <div class="icon">✨</div>
+      Fitur yang Disarankan
+    </div>
+    <div class="feature-grid">
+
+      <div class="feature-card gold">
+        <h4>🔁 Repeat &amp; Auto-play Mode</h4>
+        <p>Tambahkan mode <strong>repeat one</strong> (ulangi surah yang sama) dan <strong>auto-next</strong> (lanjut ke surah berikutnya otomatis). Fondasi sudah ada di PlayerBloc, tinggal tambahkan state <span class="code-ref">RepeatMode</span>.</p>
+      </div>
+
+      <div class="feature-card">
+        <h4>📚 Navigasi Juz</h4>
+        <p>Tambahkan filter/group by Juz (1–30) di search screen. Data juz sudah tersedia dari API AlQuran Cloud. Membantu user yang membaca mengikuti rutinitas harian.</p>
+      </div>
+
+      <div class="feature-card">
+        <h4>⬇️ Download dari Player Panel</h4>
+        <p>Tombol download langsung di <span class="code-ref">PlayerPanel</span> header untuk surah yang sedang diputar. <span class="code-ref">DownloadBloc</span> sudah tersedia, tinggal wiring UI.</p>
+      </div>
+
+      <div class="feature-card gold">
+        <h4>☁️ Cloud Sync (Phase 3)</h4>
+        <p>Interface <span class="code-ref">ICloudSyncService</span> sudah ada dengan stub <span class="code-ref">NoOpCloudSyncService</span>. Tinggal implementasi dengan Firebase Firestore atau Supabase untuk sync bookmark antar device.</p>
+      </div>
+
+      <div class="feature-card">
+        <h4>🔔 Notifikasi Download Selesai</h4>
+        <p>Setelah download selesai, tidak ada feedback selain update status di list. Tambahkan local notification (paket <span class="code-ref">flutter_local_notifications</span>) agar user tahu meski app di background.</p>
+      </div>
+
+      <div class="feature-card">
+        <h4>📋 Riwayat Mendengarkan</h4>
+        <p>Log surah-surah yang pernah diputar beserta durasi. Bisa dibangun di atas tabel SQLite baru. Berguna untuk statistik ibadah harian/mingguan.</p>
+      </div>
+
+      <div class="feature-card">
+        <h4>🔍 Cari Berdasarkan Isi Ayah</h4>
+        <p>Pencarian saat ini hanya berdasarkan nama surah. Tambahkan full-text search pada tabel ayah di SQLite menggunakan FTS5 untuk mencari kata/frasa dalam teks Arab atau terjemahan.</p>
+      </div>
+
+      <div class="feature-card gold">
+        <h4>🎨 Widget Ayah Favorit</h4>
+        <p>Izinkan user menyimpan ayah individual sebagai favorit (bukan hanya seluruh surah). Tampilkan ayah favorit sebagai widget di home screen menggunakan <span class="code-ref">home_widget</span> package.</p>
+      </div>
+
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  <!-- ═══ SECTION 6: LOCAL STORAGE FEATURES ═══ -->
+  <div class="section" id="local-storage">
+    <div class="section-title">
+      <div class="icon">💾</div>
+      Fitur Local Storage <span style="font-size:.85rem;font-weight:500;color:#4a5568;">(Offline-First)</span>
+    </div>
+
+    <!-- Intro note -->
+    <div class="rec-block" style="margin-bottom:20px;">
+      <strong>📋 Konteks Database:</strong> App sudah memiliki SQLite (sqflite) dengan 7 tabel —
+      <span class="code-ref">surahs</span>, <span class="code-ref">editions</span>,
+      <span class="code-ref">bookmarks</span>, <span class="code-ref">downloads</span>,
+      <span class="code-ref">ayahs</span>, <span class="code-ref">translations</span>,
+      <span class="code-ref">settings</span> — plus dua folder file:
+      <span class="code-ref">audio_cache/</span> (LockCachingAudioSource) dan
+      <span class="code-ref">audio_downloads/</span> (manual download).
+      Semua fitur di bawah ini memanfaatkan infrastruktur yang <strong>sudah ada</strong> tanpa butuh dependency baru.
+    </div>
+
+    <!-- LS 1 -->
+    <div class="issue-card">
+      <div class="issue-header">
+        <div class="severity-dot" style="background:#0F7C5A;"></div>
+        <div>
+          <div class="issue-title">
+            <span class="tag tag-feature">Feature</span>
+            <span class="tag" style="background:#e6f4ef;color:#0A4D38;">Local</span>
+            📥 Pre-download Teks Ayah untuk Mode Offline Penuh
+          </div>
+          <div class="issue-desc">
+            Tabel <span class="code-ref">ayahs</span> dan <span class="code-ref">translations</span> sudah ada di schema DB, namun hanya terisi saat user membuka AyahView (on-demand). Belum ada cara untuk men-download <em>seluruh</em> teks Quran + terjemahan sekaligus agar bisa dibaca offline penuh tanpa pernah membuka setiap surah satu per satu.
+          </div>
+        </div>
+      </div>
+      <div class="issue-body">
+        <strong>Tabel yang digunakan:</strong>
+        <span class="code-ref">ayahs</span> • <span class="code-ref">translations</span>
+        <br><br>
+        <strong>Skema data yang diperlukan:</strong>
+        <div class="code-snippet">
+<span class="comment">-- Tabel sudah ada, tinggal bulk-insert</span><br>
+<span class="kw">CREATE TABLE</span> ayahs (<br>
+&nbsp;&nbsp;surah_number <span class="str">INTEGER</span>,<br>
+&nbsp;&nbsp;edition_id <span class="str">TEXT</span>,     <span class="comment">-- 'quran-uthmani' untuk teks Arab</span><br>
+&nbsp;&nbsp;number_in_surah <span class="str">INTEGER</span>,<br>
+&nbsp;&nbsp;text <span class="str">TEXT</span>,<br>
+&nbsp;&nbsp;juz <span class="str">INTEGER</span>,         <span class="comment">-- sudah ada, bisa untuk filter by Juz</span><br>
+&nbsp;&nbsp;page <span class="str">INTEGER</span>          <span class="comment">-- halaman mushaf</span><br>
+);
+        </div>
+        <div class="rec-block">
+          <strong>Implementasi:</strong> Tambahkan <span class="code-ref">DownloadAllAyahsRequested</span> event ke DownloadBloc. Buat job yang iterasi 114 surah, fetch dari API <span class="code-ref">/surah/{n}/quran-uthmani</span> + <span class="code-ref">/surah/{n}/{translationId}</span>, lalu batch-insert ke SQLite. Tampilkan progress bar global di Settings ("Download Quran Offline: 45/114 surah"). Setelah selesai, AyahView tidak perlu network sama sekali.
+        </div>
+      </div>
+    </div>
+
+    <!-- LS 2 -->
+    <div class="issue-card">
+      <div class="issue-header">
+        <div class="severity-dot" style="background:#0F7C5A;"></div>
+        <div>
+          <div class="issue-title">
+            <span class="tag tag-feature">Feature</span>
+            <span class="tag" style="background:#e6f4ef;color:#0A4D38;">Local</span>
+            ⭐ Tandai Ayah Favorit (Starred Ayahs)
+          </div>
+          <div class="issue-desc">
+            Saat ini bookmark hanya di level surah, bukan ayah individual. User tidak bisa menandai ayah tertentu yang punya makna khusus bagi mereka — misalnya ayat kursi, Al-Fatihah, atau ayah motivasi tertentu.
+          </div>
+        </div>
+      </div>
+      <div class="issue-body">
+        <strong>Tabel baru yang dibutuhkan:</strong>
+        <div class="code-snippet">
+<span class="kw">CREATE TABLE</span> starred_ayahs (<br>
+&nbsp;&nbsp;id <span class="str">INTEGER PRIMARY KEY AUTOINCREMENT</span>,<br>
+&nbsp;&nbsp;surah_number <span class="str">INTEGER NOT NULL</span>,<br>
+&nbsp;&nbsp;number_in_surah <span class="str">INTEGER NOT NULL</span>,<br>
+&nbsp;&nbsp;surah_name <span class="str">TEXT NOT NULL</span>,  <span class="comment">-- denormalized untuk display cepat</span><br>
+&nbsp;&nbsp;ayah_text <span class="str">TEXT NOT NULL</span>,    <span class="comment">-- snapshot teks Arab saat disimpan</span><br>
+&nbsp;&nbsp;label <span class="str">TEXT</span>,              <span class="comment">-- tag custom user: "doa", "hafalan", dsb</span><br>
+&nbsp;&nbsp;created_at <span class="str">INTEGER NOT NULL</span>,<br>
+&nbsp;&nbsp;<span class="kw">UNIQUE</span>(surah_number, number_in_surah)<br>
+);
+        </div>
+        <div class="rec-block">
+          <strong>Implementasi:</strong> Tampilkan ikon bintang (☆/★) di setiap <span class="code-ref">_AyahTile</span>. Buat <span class="code-ref">StarredAyahBloc</span> dengan event <span class="code-ref">StarAyahRequested</span> / <span class="code-ref">UnstarAyahRequested</span>. Tambahkan tab "Favorit" di screen bookmark untuk menampilkan semua ayah yang di-bintangi. Ayah favorit bisa di-copy teksnya atau di-share sebagai gambar.
+        </div>
+      </div>
+    </div>
+
+    <!-- LS 3 -->
+    <div class="issue-card">
+      <div class="issue-header">
+        <div class="severity-dot" style="background:#0F7C5A;"></div>
+        <div>
+          <div class="issue-title">
+            <span class="tag tag-feature">Feature</span>
+            <span class="tag" style="background:#e6f4ef;color:#0A4D38;">Local</span>
+            📝 Catatan Pribadi per Ayah (Personal Notes)
+          </div>
+          <div class="issue-desc">
+            User bisa menambahkan catatan tafsir pribadi, makna yang berkesan, atau konteks historis pada ayah tertentu. Catatan ini tersimpan lokal dan bisa dilihat saat membaca di AyahView.
+          </div>
+        </div>
+      </div>
+      <div class="issue-body">
+        <strong>Tabel baru yang dibutuhkan:</strong>
+        <div class="code-snippet">
+<span class="kw">CREATE TABLE</span> ayah_notes (<br>
+&nbsp;&nbsp;id <span class="str">INTEGER PRIMARY KEY AUTOINCREMENT</span>,<br>
+&nbsp;&nbsp;surah_number <span class="str">INTEGER NOT NULL</span>,<br>
+&nbsp;&nbsp;number_in_surah <span class="str">INTEGER NOT NULL</span>,<br>
+&nbsp;&nbsp;note_text <span class="str">TEXT NOT NULL</span>,<br>
+&nbsp;&nbsp;color_hex <span class="str">TEXT DEFAULT '#FFF9C4'</span>,  <span class="comment">-- warna sticky note</span><br>
+&nbsp;&nbsp;created_at <span class="str">INTEGER NOT NULL</span>,<br>
+&nbsp;&nbsp;updated_at <span class="str">INTEGER NOT NULL</span><br>
+);
+        </div>
+        <div class="rec-block">
+          <strong>Implementasi:</strong> Long-press ayah di AyahView membuka dialog input catatan. Ayah yang punya catatan diberi indikator kecil (ikon pensil kecil di sudut). Catatan ditampilkan sebagai card kuning di bawah teks ayah saat diexpand. Tambahkan halaman "Semua Catatan" yang bisa di-sort by tanggal atau surah.
+        </div>
+      </div>
+    </div>
+
+    <!-- LS 4 -->
+    <div class="issue-card">
+      <div class="issue-header">
+        <div class="severity-dot" style="background:#0F7C5A;"></div>
+        <div>
+          <div class="issue-title">
+            <span class="tag tag-feature">Feature</span>
+            <span class="tag" style="background:#e6f4ef;color:#0A4D38;">Local</span>
+            📊 Storage Manager — Kelola Cache &amp; Download
+          </div>
+          <div class="issue-desc">
+            Tidak ada UI untuk melihat berapa banyak storage yang digunakan oleh app. User tidak tahu seberapa penuh cache audio (<span class="code-ref">audio_cache/</span>) dan file download (<span class="code-ref">audio_downloads/</span>). Tidak ada cara mudah untuk membersihkan cache tanpa uninstall app.
+          </div>
+        </div>
+      </div>
+      <div class="issue-body">
+        <strong>Data yang bisa ditampilkan:</strong>
+        <div class="code-snippet">
+<span class="comment">// Hitung ukuran folder audio_cache (streaming cache otomatis)</span><br>
+<span class="kw">final</span> cacheDir = Directory(p.join(base.path, <span class="str">'audio_cache'</span>));<br>
+<span class="kw">final</span> cacheSize = <span class="kw">await</span> _dirSize(cacheDir);<br><br>
+<span class="comment">// Hitung ukuran audio_downloads (manual download)</span><br>
+<span class="kw">final</span> dlDir = Directory(p.join(base.path, <span class="str">'audio_downloads'</span>));<br>
+<span class="kw">final</span> dlSize = <span class="kw">await</span> _dirSize(dlDir);<br><br>
+<span class="comment">// Dari tabel downloads: tampilkan per surah</span><br>
+<span class="kw">final</span> records = <span class="kw">await</span> downloadService.getAll();<br>
+<span class="comment">// → "Al-Fatihah • 2.3 MB • Mishary Alafasy"</span>
+        </div>
+        <div class="rec-block">
+          <strong>Implementasi:</strong> Tambahkan section "Penyimpanan" di Settings screen dengan: (1) Card yang menampilkan total storage used, (2) Progress bar per kategori (streaming cache vs downloaded), (3) List surah yang sudah didownload dengan ukuran file dan tombol hapus, (4) Tombol "Hapus Semua Cache Streaming". Semua data sudah tersedia dari <span class="code-ref">DownloadServiceImpl</span> dan <span class="code-ref">path_provider</span>.
+        </div>
+      </div>
+    </div>
+
+    <!-- LS 5 -->
+    <div class="issue-card">
+      <div class="issue-header">
+        <div class="severity-dot" style="background:#0F7C5A;"></div>
+        <div>
+          <div class="issue-title">
+            <span class="tag tag-feature">Feature</span>
+            <span class="tag" style="background:#e6f4ef;color:#0A4D38;">Local</span>
+            📈 Statistik Ibadah Harian (Listening History)
+          </div>
+          <div class="issue-desc">
+            Tidak ada tracking aktivitas. User tidak bisa melihat berapa banyak surah yang sudah didengarkan minggu ini, berapa total waktu, atau apakah ada streak harian. Fitur ini bisa menjadi motivasi tambahan.
+          </div>
+        </div>
+      </div>
+      <div class="issue-body">
+        <strong>Tabel baru yang dibutuhkan:</strong>
+        <div class="code-snippet">
+<span class="kw">CREATE TABLE</span> listening_history (<br>
+&nbsp;&nbsp;id <span class="str">INTEGER PRIMARY KEY AUTOINCREMENT</span>,<br>
+&nbsp;&nbsp;surah_number <span class="str">INTEGER NOT NULL</span>,<br>
+&nbsp;&nbsp;edition_id <span class="str">TEXT NOT NULL</span>,<br>
+&nbsp;&nbsp;started_at <span class="str">INTEGER NOT NULL</span>,   <span class="comment">-- timestamp ms</span><br>
+&nbsp;&nbsp;duration_ms <span class="str">INTEGER NOT NULL</span>,   <span class="comment">-- waktu didengarkan</span><br>
+&nbsp;&nbsp;completed <span class="str">INTEGER DEFAULT 0</span>    <span class="comment">-- 1 = didengarkan penuh</span><br>
+);<br>
+<span class="kw">CREATE INDEX</span> idx_history_date <span class="kw">ON</span> listening_history(started_at);
+        </div>
+        <div class="rec-block">
+          <strong>Implementasi:</strong> Di <span class="code-ref">PlayerBloc._onStop / _onPlaybackUpdated</span>, insert row ke tabel ini setiap sesi play berakhir. Tampilkan di halaman "Statistik" (atau card di halaman utama): total surah minggu ini, waktu mendengarkan hari ini, streak "berturut-turut" dalam hari, dan grafik sederhana 7 hari terakhir. Semua query bisa menggunakan SQL agregasi langsung di sqflite.
+        </div>
+      </div>
+    </div>
+
+    <!-- LS 6 -->
+    <div class="issue-card">
+      <div class="issue-header">
+        <div class="severity-dot" style="background:#0F7C5A;"></div>
+        <div>
+          <div class="issue-title">
+            <span class="tag tag-feature">Feature</span>
+            <span class="tag" style="background:#e6f4ef;color:#0A4D38;">Local</span>
+            🎵 Playlist Kustom (Urutan Surah Tersimpan)
+          </div>
+          <div class="issue-desc">
+            User tidak bisa membuat urutan putar kustom, misalnya "Bacaan Subuh" (Al-Fatihah, Al-Ikhlas, Al-Falaq, An-Nas) atau "Juz Amma". Setelah satu surah selesai, player berhenti tanpa opsi lanjut otomatis ke queue.
+          </div>
+        </div>
+      </div>
+      <div class="issue-body">
+        <strong>Tabel baru yang dibutuhkan:</strong>
+        <div class="code-snippet">
+<span class="kw">CREATE TABLE</span> playlists (<br>
+&nbsp;&nbsp;id <span class="str">INTEGER PRIMARY KEY AUTOINCREMENT</span>,<br>
+&nbsp;&nbsp;name <span class="str">TEXT NOT NULL</span>,<br>
+&nbsp;&nbsp;created_at <span class="str">INTEGER NOT NULL</span><br>
+);<br><br>
+<span class="kw">CREATE TABLE</span> playlist_items (<br>
+&nbsp;&nbsp;id <span class="str">INTEGER PRIMARY KEY AUTOINCREMENT</span>,<br>
+&nbsp;&nbsp;playlist_id <span class="str">INTEGER NOT NULL REFERENCES playlists(id)</span>,<br>
+&nbsp;&nbsp;surah_number <span class="str">INTEGER NOT NULL</span>,<br>
+&nbsp;&nbsp;edition_id <span class="str">TEXT NOT NULL</span>,<br>
+&nbsp;&nbsp;sort_order <span class="str">INTEGER NOT NULL</span>,<br>
+&nbsp;&nbsp;<span class="kw">UNIQUE</span>(playlist_id, surah_number, edition_id)<br>
+);
+        </div>
+        <div class="rec-block">
+          <strong>Implementasi:</strong> Tambahkan event <span class="code-ref">PlayerQueueSet(List&lt;Track&gt;)</span> dan state <span class="code-ref">queue</span> + <span class="code-ref">queueIndex</span> di PlayerBloc. Ketika <span class="code-ref">PlaybackStatus.completed</span>, auto-advance ke track berikutnya di queue. UI: tombol "Tambah ke Playlist" di SurahTile (long-press), halaman "Playlist Saya", dan chip "Mainkan Juz X" yang otomatis build queue dari tabel ayahs (kolom <span class="code-ref">juz</span> sudah ada).
+        </div>
+      </div>
+    </div>
+
+    <!-- LS 7 -->
+    <div class="issue-card">
+      <div class="issue-header">
+        <div class="severity-dot" style="background:#0F7C5A;"></div>
+        <div>
+          <div class="issue-title">
+            <span class="tag tag-feature">Feature</span>
+            <span class="tag" style="background:#e6f4ef;color:#0A4D38;">Local</span>
+            📖 Riwayat Baca per Surah (Reading Progress)
+          </div>
+          <div class="issue-desc">
+            AyahView tidak menyimpan posisi ayah terakhir yang dibaca. Setiap kali user membuka surah untuk dibaca, selalu mulai dari ayah pertama. Untuk surah panjang seperti Al-Baqarah (286 ayah), ini sangat tidak nyaman.
+          </div>
+        </div>
+      </div>
+      <div class="issue-body">
+        <strong>Tabel yang dimodifikasi:</strong> Extend tabel <span class="code-ref">bookmarks</span> atau buat tabel terpisah:
+        <div class="code-snippet">
+<span class="kw">CREATE TABLE</span> reading_progress (<br>
+&nbsp;&nbsp;surah_number <span class="str">INTEGER PRIMARY KEY</span>,<br>
+&nbsp;&nbsp;last_ayah_index <span class="str">INTEGER NOT NULL DEFAULT 0</span>,<br>
+&nbsp;&nbsp;total_ayahs <span class="str">INTEGER NOT NULL</span>,<br>
+&nbsp;&nbsp;last_read_at <span class="str">INTEGER NOT NULL</span><br>
+);<br><br>
+<span class="comment">-- View progress: "Al-Baqarah — 45/286 ayah dibaca"</span>
+        </div>
+        <div class="rec-block">
+          <strong>Implementasi:</strong> Di <span class="code-ref">AyahView._onScroll</span>, setelah user scroll melewati ayah tertentu, update tabel ini. Saat AyahView dibuka ulang, scroll otomatis ke ayah terakhir dengan <span class="code-ref">scrollController.jumpTo()</span>. Tampilkan progress bar kecil di SurahTile (misalnya garis hijau tipis di bawah tile) sebagai visual indicator kemajuan membaca.
+        </div>
+      </div>
+    </div>
+
+    <!-- LS 8 -->
+    <div class="issue-card">
+      <div class="issue-header">
+        <div class="severity-dot" style="background:#0F7C5A;"></div>
+        <div>
+          <div class="issue-title">
+            <span class="tag tag-feature">Feature</span>
+            <span class="tag" style="background:#e6f4ef;color:#0A4D38;">Local</span>
+            💼 Export &amp; Import Data (Backup JSON ke File)
+          </div>
+          <div class="issue-desc">
+            Tidak ada mekanisme backup data lokal (bookmark, catatan, starred ayah, settings). Jika user uninstall app atau ganti HP, semua data hilang. Cloud sync masih Phase 3 — export ke file JSON adalah solusi sementara yang bisa diimplementasi sekarang.
+          </div>
+        </div>
+      </div>
+      <div class="issue-body">
+        <strong>Dependency yang dibutuhkan:</strong> Hanya <span class="code-ref">dart:convert</span> + <span class="code-ref">path_provider</span> (sudah ada) + <span class="code-ref">share_plus</span> (opsional untuk share file)
+        <div class="code-snippet">
+<span class="comment">// Struktur file backup.json</span><br>
+{<br>
+&nbsp;&nbsp;<span class="str">"version"</span>: <span class="fn">2</span>,<br>
+&nbsp;&nbsp;<span class="str">"exported_at"</span>: <span class="str">"2026-06-05T10:00:00Z"</span>,<br>
+&nbsp;&nbsp;<span class="str">"bookmarks"</span>: [...],<br>
+&nbsp;&nbsp;<span class="str">"starred_ayahs"</span>: [...],<br>
+&nbsp;&nbsp;<span class="str">"ayah_notes"</span>: [...],<br>
+&nbsp;&nbsp;<span class="str">"reading_progress"</span>: [...],<br>
+&nbsp;&nbsp;<span class="str">"settings"</span>: { <span class="str">"theme"</span>: <span class="str">"dark"</span>, <span class="str">"locale"</span>: <span class="str">"id"</span>, ... }<br>
+}
+        </div>
+        <div class="rec-block">
+          <strong>Implementasi:</strong> Tambahkan menu "Backup & Restore" di Settings. Export: query semua tabel relevan → serialize JSON → tulis ke <span class="code-ref">getApplicationDocumentsDirectory()/backup_[date].json</span> → tampilkan dialog dengan path file atau share sheet. Import: pilih file JSON → validasi struktur → upsert ke DB. Versi field mencegah konflik jika schema berubah.
+        </div>
+      </div>
+    </div>
+
+    <!-- DB overview table -->
+    <div style="margin-top:24px;">
+      <div class="section-title" style="font-size:1rem;border:none;padding-bottom:0;margin-bottom:14px;">
+        <div class="icon" style="width:28px;height:28px;font-size:14px;">🗄️</div>
+        Ringkasan Schema DB — Existing vs. Proposed
+      </div>
+      <table class="priority-table">
+        <thead>
+          <tr>
+            <th>Tabel</th>
+            <th>Status</th>
+            <th>Digunakan Untuk</th>
+            <th>Perlu Ditambah?</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="code-ref">surahs</span></td>
+            <td><span class="pill pill-p4" style="background:#ecfdf5;color:#166534;">✅ Ada</span></td>
+            <td>Cache metadata 114 surah dari API</td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <td><span class="code-ref">editions</span></td>
+            <td><span class="pill pill-p4" style="background:#ecfdf5;color:#166534;">✅ Ada</span></td>
+            <td>Cache daftar qori dari API</td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <td><span class="code-ref">bookmarks</span></td>
+            <td><span class="pill pill-p4" style="background:#ecfdf5;color:#166534;">✅ Ada</span></td>
+            <td>Bookmark surah + last-played position audio</td>
+            <td>Extend untuk surah name display</td>
+          </tr>
+          <tr>
+            <td><span class="code-ref">downloads</span></td>
+            <td><span class="pill pill-p4" style="background:#ecfdf5;color:#166534;">✅ Ada</span></td>
+            <td>Status & progress download audio file</td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <td><span class="code-ref">ayahs</span></td>
+            <td><span class="pill pill-p3" style="background:#fff7ed;color:#c2410c;">⚠️ Ada, Parsial</span></td>
+            <td>Cache teks ayah per surah (hanya on-demand)</td>
+            <td>Bulk download endpoint untuk offline mode</td>
+          </tr>
+          <tr>
+            <td><span class="code-ref">translations</span></td>
+            <td><span class="pill pill-p3" style="background:#fff7ed;color:#c2410c;">⚠️ Ada, Parsial</span></td>
+            <td>Cache terjemahan per surah (hanya on-demand)</td>
+            <td>Bulk download + multi-language support</td>
+          </tr>
+          <tr>
+            <td><span class="code-ref">settings</span></td>
+            <td><span class="pill pill-p4" style="background:#ecfdf5;color:#166534;">✅ Ada</span></td>
+            <td>Key-value store untuk app settings</td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <td><span class="code-ref">starred_ayahs</span></td>
+            <td><span class="pill pill-p1" style="background:#fef2f2;color:#dc2626;">🆕 Baru</span></td>
+            <td>Ayah individual yang di-bintangi user</td>
+            <td>Buat tabel baru (DB migration v3)</td>
+          </tr>
+          <tr>
+            <td><span class="code-ref">ayah_notes</span></td>
+            <td><span class="pill pill-p1" style="background:#fef2f2;color:#dc2626;">🆕 Baru</span></td>
+            <td>Catatan pribadi per ayah</td>
+            <td>Buat tabel baru (DB migration v3)</td>
+          </tr>
+          <tr>
+            <td><span class="code-ref">listening_history</span></td>
+            <td><span class="pill pill-p1" style="background:#fef2f2;color:#dc2626;">🆕 Baru</span></td>
+            <td>Log sesi mendengarkan untuk statistik</td>
+            <td>Buat tabel baru (DB migration v3)</td>
+          </tr>
+          <tr>
+            <td><span class="code-ref">playlists + playlist_items</span></td>
+            <td><span class="pill pill-p1" style="background:#fef2f2;color:#dc2626;">🆕 Baru</span></td>
+            <td>Urutan surah kustom yang tersimpan</td>
+            <td>Buat 2 tabel baru (DB migration v3)</td>
+          </tr>
+          <tr>
+            <td><span class="code-ref">reading_progress</span></td>
+            <td><span class="pill pill-p1" style="background:#fef2f2;color:#dc2626;">🆕 Baru</span></td>
+            <td>Posisi ayah terakhir dibaca per surah</td>
+            <td>Buat tabel baru (DB migration v3)</td>
+          </tr>
+          <tr>
+            <td><span class="code-ref">audio_cache/</span> (folder)</td>
+            <td><span class="pill pill-p4" style="background:#ecfdf5;color:#166534;">✅ Ada</span></td>
+            <td>LockCachingAudioSource — cache streaming otomatis</td>
+            <td>Tampilkan ukuran di Storage Manager</td>
+          </tr>
+          <tr>
+            <td><span class="code-ref">audio_downloads/</span> (folder)</td>
+            <td><span class="pill pill-p4" style="background:#ecfdf5;color:#166534;">✅ Ada</span></td>
+            <td>File audio yang didownload manual</td>
+            <td>Tampilkan ukuran per file di Storage Manager</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="rec-block" style="margin-top:20px;">
+      <strong>📌 Catatan Migrasi DB:</strong> Semua tabel baru di atas cukup ditambahkan di method <span class="code-ref">DatabaseService._onUpgrade</span> dalam blok <span class="code-ref">if (oldVersion &lt; 3)</span>. Increment <span class="code-ref">_dbVersion</span> dari <strong>2 → 3</strong>. Tidak ada data yang rusak karena semua tabel baru di-<span class="code-ref">CREATE IF NOT EXISTS</span>.
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  <!-- ═══ SECTION 7: SOLID & OOP ═══ -->
+  <div class="section" id="solid">
+    <div class="section-title">
+      <div class="icon">🧱</div>
+      Upgrade OOP &amp; Prinsip SOLID
+    </div>
+
+    <div class="rec-block" style="margin-bottom:22px;">
+      <strong>🎯 Catatan:</strong> Arsitektur keseluruhan sudah sangat baik — interface-driven, clean separation of concerns, BLoC pattern konsisten. Temuan di bawah ini adalah <em>refinement</em> untuk mendekati kode yang ideal, bukan perbaikan kritis. Setiap item dilengkapi contoh <strong>Before</strong> (kode saat ini) dan <strong>After</strong> (rekomendasi).
+    </div>
+
+    <!-- ──────── S ──────── -->
+    <div class="solid-section">
+      <div class="solid-section-header">
+        <span class="solid-badge solid-s">S</span>
+        <span class="principle-name">Single Responsibility Principle</span>
+        <span style="color:#94a3b8;font-weight:400;font-size:.82rem;">— setiap class hanya punya satu alasan untuk berubah</span>
+      </div>
+
+      <div class="solid-row">
+        <div class="solid-badge solid-s" style="margin-top:2px;">S</div>
+        <div class="solid-row-body">
+          <div class="solid-row-title">
+            <span class="tag tag-high">Tinggi</span>
+            <span class="code-ref">QuranRepositoryImpl._composeTracks</span> — fungsi "komposisi" dengan side effect tersembunyi
+          </div>
+          <div class="solid-row-desc">
+            Method <span class="code-ref">_composeTracks(surahs, editions)</span> terlihat sebagai fungsi komposisi murni, tapi diam-diam meng-assign <span class="code-ref">_surahsMemoryCache</span> dan <span class="code-ref">_recitersMemoryCache</span> sebagai side effect. Ini melanggar SRP karena satu method melakukan dua hal: <em>membangun track list</em> sekaligus <em>memperbarui dua cache</em>. Sulit di-test dan rawan bug urutan pemanggilan.
+          </div>
+          <div class="before-after">
+            <div class="ba-before">
+              <div class="ba-label">❌ Before</div>
+              <div class="code-snippet">
+<span class="kw">List</span>&lt;Track&gt; _composeTracks(<br>
+&nbsp;&nbsp;<span class="kw">List</span>&lt;Surah&gt; surahs,<br>
+&nbsp;&nbsp;<span class="kw">List</span>&lt;Edition&gt; editions,<br>
+) {<br>
+&nbsp;&nbsp;<span class="comment">// ... filter reciters ...</span><br>
+&nbsp;&nbsp;<span class="comment">// ⚠️ side effects!</span><br>
+&nbsp;&nbsp;_surahsMemoryCache = surahs;<br>
+&nbsp;&nbsp;_recitersMemoryCache = reciters;<br>
+&nbsp;&nbsp;<span class="kw">return</span> &lt;Track&gt;[...];<br>
+}
+              </div>
+            </div>
+            <div class="ba-after">
+              <div class="ba-label">✅ After — value object</div>
+              <div class="code-snippet">
+<span class="comment">// Value object — immutable, pure</span><br>
+<span class="kw">class</span> <span class="fn">_ComposedData</span> {<br>
+&nbsp;&nbsp;<span class="kw">final</span> List&lt;Surah&gt; surahs;<br>
+&nbsp;&nbsp;<span class="kw">final</span> List&lt;Edition&gt; reciters;<br>
+&nbsp;&nbsp;<span class="kw">final</span> List&lt;Track&gt; tracks;<br>
+&nbsp;&nbsp;<span class="kw">const</span> _ComposedData({...});<br>
+}<br><br>
+<span class="fn">_ComposedData</span> _compose(<br>
+&nbsp;&nbsp;List&lt;Surah&gt; s, List&lt;Edition&gt; e) {<br>
+&nbsp;&nbsp;<span class="comment">// pure — no side effects</span><br>
+&nbsp;&nbsp;<span class="kw">return</span> _ComposedData(...);<br>
+}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="solid-row">
+        <div class="solid-badge solid-s" style="margin-top:2px;">S</div>
+        <div class="solid-row-body">
+          <div class="solid-row-title">
+            <span class="tag tag-high">Tinggi</span>
+            <span class="code-ref">PlayerBloc._describeAudioError</span> — logika klasifikasi error ada di dalam BLoC
+          </div>
+          <div class="solid-row-desc">
+            BLoC seharusnya hanya mengatur alur state. Method <span class="code-ref">_describeAudioError(Object e)</span> yang melakukan parsing string error (<code>contains('403')</code>, <code>contains('socket')</code>) adalah tanggung jawab terpisah — ia adalah sebuah <em>error mapper</em>. Jika aturan error berubah, kita harus masuk ke dalam PlayerBloc untuk memodifikasinya.
+          </div>
+          <div class="before-after">
+            <div class="ba-before">
+              <div class="ba-label">❌ Before — di dalam BLoC</div>
+              <div class="code-snippet">
+<span class="comment">// player_bloc.dart</span><br>
+<span class="kw">String</span> _describeAudioError(<span class="kw">Object</span> e) {<br>
+&nbsp;&nbsp;<span class="kw">final</span> raw = e.toString();<br>
+&nbsp;&nbsp;<span class="kw">if</span> (raw.contains(<span class="str">'403'</span>)) ...<br>
+&nbsp;&nbsp;<span class="kw">if</span> (raw.contains(<span class="str">'404'</span>)) ...<br>
+&nbsp;&nbsp;<span class="kw">if</span> (raw.contains(<span class="str">'socket'</span>)) ...<br>
+&nbsp;&nbsp;<span class="kw">return</span> <span class="str">'Unable to load audio.'</span>;<br>
+}
+              </div>
+            </div>
+            <div class="ba-after">
+              <div class="ba-label">✅ After — class terpisah</div>
+              <div class="code-snippet">
+<span class="comment">// audio_error_mapper.dart</span><br>
+<span class="kw">class</span> <span class="fn">AudioErrorMapper</span> {<br>
+&nbsp;&nbsp;<span class="kw">const</span> AudioErrorMapper();<br>
+&nbsp;&nbsp;PlaybackException map(<span class="kw">Object</span> e) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// sama, tapi injectable &amp; testable</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;...<br>
+&nbsp;&nbsp;}<br>
+}<br><br>
+<span class="comment">// PlayerBloc menerima mapper via konstruktor</span><br>
+PlayerBloc(this._player, this._errorMapper);
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="solid-row">
+        <div class="solid-badge solid-s" style="margin-top:2px;">S</div>
+        <div class="solid-row-body">
+          <div class="solid-row-title">
+            <span class="tag tag-medium">Medium</span>
+            <span class="code-ref">AyahBloc._onToggleTranslation</span> — satu handler melakukan 3 pekerjaan berbeda
+          </div>
+          <div class="solid-row-desc">
+            Handler ini melakukan: (1) toggle state, (2) persist preference ke Settings, (3) lazy-fetch terjemahan jika belum ada — sambil memanggil <span class="code-ref">_settings.load()</span> <strong>dua kali</strong> secara redundan. Tiga tanggung jawab ini bisa dipisahkan dengan event yang lebih granular dan sebuah <span class="code-ref">TranslationLoader</span> helper.
+          </div>
+          <div class="rec-block">
+            <strong>Saran:</strong> Pisahkan menjadi dua event: <span class="code-ref">AyahTranslationToggled</span> (hanya toggle + save pref) dan <span class="code-ref">AyahTranslationFetchRequested</span> (fetch data). BLoC memanggil event kedua dari dalam listener pertama jika diperlukan. Eliminasi pemanggilan <span class="code-ref">_settings.load()</span> ganda dengan menyimpan settings yang dibutuhkan di AyahState saat load pertama.
+          </div>
+        </div>
+      </div>
+
+      <div class="solid-row">
+        <div class="solid-badge solid-s" style="margin-top:2px;">S</div>
+        <div class="solid-row-body">
+          <div class="solid-row-title">
+            <span class="tag tag-medium">Medium</span>
+            <span class="code-ref">DownloadServiceImpl</span> — HTTP, file I/O, database, dan stream dalam satu class
+          </div>
+          <div class="solid-row-desc">
+            Class ini menangani: (1) HTTP streaming, (2) penulisan file ke disk, (3) read/write SQLite, dan (4) broadcast stream ke subscriber. Idealnya dipisah menjadi <span class="code-ref">AudioFileDownloader</span> (HTTP+IO) dan <span class="code-ref">DownloadRepository</span> (persistence), yang dikomposisi oleh <span class="code-ref">DownloadManager</span>.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ──────── O ──────── -->
+    <div class="solid-section">
+      <div class="solid-section-header">
+        <span class="solid-badge solid-o">O</span>
+        <span class="principle-name">Open/Closed Principle</span>
+        <span style="color:#94a3b8;font-weight:400;font-size:.82rem;">— terbuka untuk ekstensi, tertutup untuk modifikasi</span>
+      </div>
+
+      <div class="solid-row">
+        <div class="solid-badge solid-o" style="margin-top:2px;">O</div>
+        <div class="solid-row-body">
+          <div class="solid-row-title">
+            <span class="tag tag-high">Tinggi</span>
+            <span class="code-ref">QuranRepositoryImpl._featuredReciters</span> — daftar qori di-hardcode dalam class
+          </div>
+          <div class="solid-row-desc">
+            <span class="code-ref">static const Set&lt;String&gt; _featuredReciters = {'ar.alafasy', ...}</span> tertanam di dalam class. Menambah atau menghapus qori <em>mengharuskan modifikasi</em> class ini. Ini melanggar OCP karena konfigurasi bisnis seharusnya bisa berubah tanpa menyentuh kode repository.
+          </div>
+          <div class="before-after">
+            <div class="ba-before">
+              <div class="ba-label">❌ Before — hardcoded</div>
+              <div class="code-snippet">
+<span class="kw">class</span> QuranRepositoryImpl {<br>
+&nbsp;&nbsp;<span class="kw">static const</span> Set&lt;<span class="kw">String</span>&gt; _featuredReciters = {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="str">'ar.alafasy'</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="str">'ar.abdulbasitmurattal'</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="str">'ar.abdullahbasfar'</span>,<br>
+&nbsp;&nbsp;};<br>
+}
+              </div>
+            </div>
+            <div class="ba-after">
+              <div class="ba-label">✅ After — injectable config</div>
+              <div class="code-snippet">
+<span class="comment">// app_config.dart</span><br>
+<span class="kw">class</span> AppConfig {<br>
+&nbsp;&nbsp;<span class="kw">final</span> Set&lt;<span class="kw">String</span>&gt; featuredReciterIds;<br>
+&nbsp;&nbsp;<span class="kw">const</span> AppConfig({<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">this</span>.featuredReciterIds = <span class="kw">const</span> {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="str">'ar.alafasy'</span>, ...<br>
+&nbsp;&nbsp;&nbsp;&nbsp;},<br>
+&nbsp;&nbsp;});<br>
+}<br><br>
+QuranRepositoryImpl(remote, local, conn,<br>
+&nbsp;&nbsp;<span class="kw">this</span>._config); <span class="comment">// injected</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="solid-row">
+        <div class="solid-badge solid-o" style="margin-top:2px;">O</div>
+        <div class="solid-row-body">
+          <div class="solid-row-title">
+            <span class="tag tag-high">Tinggi</span>
+            <span class="code-ref">PlayerBloc._describeAudioError</span> — menambah error baru = modifikasi kode lama
+          </div>
+          <div class="solid-row-desc">
+            Pola <code>if (raw.contains('403'))</code>, <code>if (raw.contains('404'))</code> adalah sebuah chain if-else yang harus dimodifikasi setiap kali ada tipe error baru. Ini klasik pelanggaran OCP. Solusinya adalah <strong>Chain of Responsibility</strong> atau daftar handler yang bisa di-extend tanpa modifikasi.
+          </div>
+          <div class="before-after">
+            <div class="ba-before">
+              <div class="ba-label">❌ Before — if-chain</div>
+              <div class="code-snippet">
+<span class="kw">if</span> (raw.contains(<span class="str">'403'</span>)) <span class="kw">return</span> ...;<br>
+<span class="kw">if</span> (raw.contains(<span class="str">'404'</span>)) <span class="kw">return</span> ...;<br>
+<span class="kw">if</span> (raw.contains(<span class="str">'socket'</span>)) <span class="kw">return</span> ...;<br>
+<span class="kw">return</span> <span class="str">'Unable to load audio.'</span>;
+              </div>
+            </div>
+            <div class="ba-after">
+              <div class="ba-label">✅ After — strategy list</div>
+              <div class="code-snippet">
+<span class="kw">abstract class</span> <span class="fn">AudioErrorHandler</span> {<br>
+&nbsp;&nbsp;<span class="kw">bool</span> canHandle(<span class="kw">Object</span> e);<br>
+&nbsp;&nbsp;<span class="kw">String</span> describe(<span class="kw">Object</span> e);<br>
+}<br><br>
+<span class="comment">// List bisa di-extend tanpa ubah core</span><br>
+<span class="kw">final</span> _handlers = [<br>
+&nbsp;&nbsp;ForbiddenErrorHandler(),<br>
+&nbsp;&nbsp;NotFoundErrorHandler(),<br>
+&nbsp;&nbsp;NetworkErrorHandler(),<br>
+&nbsp;&nbsp;FallbackErrorHandler(),<br>
+];
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="solid-row">
+        <div class="solid-badge solid-o" style="margin-top:2px;">O</div>
+        <div class="solid-row-body">
+          <div class="solid-row-title">
+            <span class="tag tag-medium">Medium</span>
+            <span class="code-ref">NetworkClient.getJson</span> — hanya mendukung respons <code>Map</code>, tidak extensible untuk respons <code>List</code>
+          </div>
+          <div class="solid-row-desc">
+            Beberapa endpoint AlQuran Cloud mengembalikan root <code>List</code>. Saat ini <span class="code-ref">NetworkClient</span> akan melempar <span class="code-ref">RemoteException('Unexpected response shape')</span> untuk kasus ini. Menambah dukungan response type baru membutuhkan modifikasi class.
+          </div>
+          <div class="rec-block">
+            <strong>Saran:</strong> Gunakan generic method: <span class="code-ref">Future&lt;T&gt; get&lt;T&gt;(Uri uri, T Function(dynamic) decoder)</span>. Caller menyediakan decoder function sendiri, NetworkClient hanya bertanggung jawab atas transport. Ini membuat class terbuka untuk berbagai bentuk respons tanpa perlu dimodifikasi.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ──────── L ──────── -->
+    <div class="solid-section">
+      <div class="solid-section-header">
+        <span class="solid-badge solid-l">L</span>
+        <span class="principle-name">Liskov Substitution Principle</span>
+        <span style="color:#94a3b8;font-weight:400;font-size:.82rem;">— subtype harus bisa menggantikan supertype tanpa mengubah perilaku</span>
+      </div>
+
+      <div class="solid-row">
+        <div class="solid-badge solid-l" style="margin-top:2px;">L</div>
+        <div class="solid-row-body">
+          <div class="solid-row-title">
+            <span class="tag tag-medium">Medium</span>
+            <span class="code-ref">JustAudioPlayerService.load()</span> — silent fallback mengubah kontrak secara diam-diam
+          </div>
+          <div class="solid-row-desc">
+            Dalam method <span class="code-ref">load()</span>, ada blok <code>catch (_)</code> yang diam-diam fallback ke <span class="code-ref">AudioSource.uri</span> (tanpa cache). Caller yang mengimplementasikan <span class="code-ref">IAudioPlayerService</span> tidak tahu bahwa track yang dimuat mungkin tidak ter-cache. Jika ada implementasi lain yang tidak punya fallback, perilakunya berbeda secara signifikan — melanggar LSP.
+          </div>
+          <div class="before-after">
+            <div class="ba-before">
+              <div class="ba-label">❌ Before — silent fallback</div>
+              <div class="code-snippet">
+<span class="kw">try</span> {<br>
+&nbsp;&nbsp;<span class="kw">await</span> _player.setAudioSource(<br>
+&nbsp;&nbsp;&nbsp;&nbsp;LockCachingAudioSource(...))<br>
+} <span class="kw">catch</span> (_) {<br>
+&nbsp;&nbsp;<span class="comment">// ⚠️ fallback tanpa notifikasi</span><br>
+&nbsp;&nbsp;<span class="kw">await</span> _player.setAudioSource(<br>
+&nbsp;&nbsp;&nbsp;&nbsp;AudioSource.uri(...));<br>
+}
+              </div>
+            </div>
+            <div class="ba-after">
+              <div class="ba-label">✅ After — explicit contract</div>
+              <div class="code-snippet">
+<span class="comment">// Tambahkan ke IAudioPlayerService:</span><br>
+<span class="comment">/// true jika track ter-cache lokal</span><br>
+<span class="kw">bool</span> <span class="kw">get</span> isCached;<br><br>
+<span class="comment">// Impl set isCached = false saat fallback</span><br>
+<span class="comment">// Caller bisa cek &amp; tampilkan indikator</span><br>
+<span class="comment">// "streaming (no cache)" ke user</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="solid-row">
+        <div class="solid-badge solid-l" style="margin-top:2px;">L</div>
+        <div class="solid-row-body">
+          <div class="solid-row-title">
+            <span class="tag tag-low">Low</span>
+            <span class="code-ref">NoOpCloudSyncService</span> — implementasi yang benar ✅ (contoh positif)
+          </div>
+          <div class="solid-row-desc">
+            <span class="code-ref">NoOpCloudSyncService</span> mengimplementasikan semua method dari <span class="code-ref">ICloudSyncService</span> dengan no-op yang valid (tidak lempar exception, return type sama). Ini adalah contoh LSP yang benar — bisa disubstitusi ke manapun tanpa efek samping tak terduga. Pertahankan pola ini saat implementasi Cloud Sync nyata dibuat.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ──────── I ──────── -->
+    <div class="solid-section">
+      <div class="solid-section-header">
+        <span class="solid-badge solid-i">I</span>
+        <span class="principle-name">Interface Segregation Principle</span>
+        <span style="color:#94a3b8;font-weight:400;font-size:.82rem;">— klien tidak boleh dipaksa bergantung pada method yang tidak digunakannya</span>
+      </div>
+
+      <div class="solid-row">
+        <div class="solid-badge solid-i" style="margin-top:2px;">I</div>
+        <div class="solid-row-body">
+          <div class="solid-row-title">
+            <span class="tag tag-high">Tinggi</span>
+            <span class="code-ref">IQuranRepository</span> — <code>SearchBloc</code> tidak pernah menggunakan <code>getTracks()</code> dan <code>search()</code>
+          </div>
+          <div class="solid-row-desc">
+            <span class="code-ref">IQuranRepository</span> memiliki 5 method. <span class="code-ref">SearchBloc</span> hanya menggunakan 3: <span class="code-ref">getSurahs()</span>, <span class="code-ref">searchSurahs()</span>, <span class="code-ref">getReciters()</span>. Method <span class="code-ref">getTracks()</span> dan <span class="code-ref">search()</span> tidak dipanggil oleh siapapun di fitur yang ada. Interface yang terlalu gemuk memaksa test doubles mengimplementasikan method yang tidak relevan.
+          </div>
+          <div class="before-after">
+            <div class="ba-before">
+              <div class="ba-label">❌ Before — 1 interface besar</div>
+              <div class="code-snippet">
+<span class="kw">abstract class</span> <span class="fn">IQuranRepository</span> {<br>
+&nbsp;&nbsp;getTracks();     <span class="comment">// ← tidak dipakai SearchBloc</span><br>
+&nbsp;&nbsp;getSurahs();<br>
+&nbsp;&nbsp;getReciters();<br>
+&nbsp;&nbsp;search();        <span class="comment">// ← tidak dipakai SearchBloc</span><br>
+&nbsp;&nbsp;searchSurahs();<br>
+}
+              </div>
+            </div>
+            <div class="ba-after">
+              <div class="ba-label">✅ After — interface kecil</div>
+              <div class="code-snippet">
+<span class="kw">abstract class</span> <span class="fn">ISurahRepository</span> {<br>
+&nbsp;&nbsp;getSurahs();<br>
+&nbsp;&nbsp;searchSurahs();<br>
+}<br>
+<span class="kw">abstract class</span> <span class="fn">IEditionRepository</span> {<br>
+&nbsp;&nbsp;getReciters();<br>
+}<br>
+<span class="comment">// SearchBloc hanya perlu 2 interface ↑</span><br>
+<span class="comment">// Impl tetap satu class yang implements keduanya</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="solid-row">
+        <div class="solid-badge solid-i" style="margin-top:2px;">I</div>
+        <div class="solid-row-body">
+          <div class="solid-row-title">
+            <span class="tag tag-medium">Medium</span>
+            <span class="code-ref">IAudioPlayerService</span> — menggabungkan transport control dan observable streams
+          </div>
+          <div class="solid-row-desc">
+            Interface ini punya dua concern berbeda: (1) <em>perintah</em> (<span class="code-ref">load, play, pause, stop, seek, setSpeed, dispose</span>) dan (2) <em>observasi</em> (<span class="code-ref">positionStream, durationStream, playbackStream</span>). Komponen yang hanya perlu mendengarkan posisi (misalnya widget progress bar) terpaksa bergantung pada seluruh interface.
+          </div>
+          <div class="before-after">
+            <div class="ba-before">
+              <div class="ba-label">❌ Before — 1 interface 10 member</div>
+              <div class="code-snippet">
+<span class="kw">abstract class</span> <span class="fn">IAudioPlayerService</span> {<br>
+&nbsp;&nbsp;load(); play(); pause();<br>
+&nbsp;&nbsp;stop(); seek(); setSpeed();<br>
+&nbsp;&nbsp;dispose();<br>
+&nbsp;&nbsp;Stream positionStream;   <span class="comment">// ←</span><br>
+&nbsp;&nbsp;Stream durationStream;   <span class="comment">// ← mixed</span><br>
+&nbsp;&nbsp;Stream playbackStream;   <span class="comment">// ←</span><br>
+}
+              </div>
+            </div>
+            <div class="ba-after">
+              <div class="ba-label">✅ After — 2 interface fokus</div>
+              <div class="code-snippet">
+<span class="kw">abstract class</span> <span class="fn">IAudioTransport</span> {<br>
+&nbsp;&nbsp;load(); play(); pause();<br>
+&nbsp;&nbsp;stop(); seek(); setSpeed();<br>
+&nbsp;&nbsp;dispose();<br>
+}<br>
+<span class="kw">abstract class</span> <span class="fn">IAudioObserver</span> {<br>
+&nbsp;&nbsp;Stream get positionStream;<br>
+&nbsp;&nbsp;Stream get durationStream;<br>
+&nbsp;&nbsp;Stream get playbackStream;<br>
+}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ──────── D ──────── -->
+    <div class="solid-section">
+      <div class="solid-section-header">
+        <span class="solid-badge solid-d">D</span>
+        <span class="principle-name">Dependency Inversion Principle</span>
+        <span style="color:#94a3b8;font-weight:400;font-size:.82rem;">— bergantung pada abstraksi, bukan implementasi konkret</span>
+      </div>
+
+      <div class="solid-row">
+        <div class="solid-badge solid-d" style="margin-top:2px;">D</div>
+        <div class="solid-row-body">
+          <div class="solid-row-title">
+            <span class="tag tag-high">Tinggi</span>
+            <span class="code-ref">SleepTimerBloc</span> menggunakan <code>dart:async.Timer</code> secara langsung — tidak bisa di-test tanpa menunggu waktu nyata
+          </div>
+          <div class="solid-row-desc">
+            <span class="code-ref">SleepTimerBloc</span> membuat <span class="code-ref">Timer.periodic(Duration(seconds: 1), ...)</span> langsung di dalam handler. Test yang memverifikasi perilaku sleep timer (misalnya "setelah 15 menit timer expired") harus menunggu 15 menit — atau tidak bisa di-test sama sekali. <span class="code-ref">Timer</span> adalah implementasi konkret yang harus diabstraksi.
+          </div>
+          <div class="before-after">
+            <div class="ba-before">
+              <div class="ba-label">❌ Before — concrete Timer</div>
+              <div class="code-snippet">
+<span class="comment">// Tidak bisa di-test tanpa menunggu</span><br>
+_ticker = Timer.periodic(<br>
+&nbsp;&nbsp;<span class="kw">const</span> Duration(seconds: 1),<br>
+&nbsp;&nbsp;(_) { <span class="kw">if</span> (!isClosed) add(Tick()); },<br>
+);
+              </div>
+            </div>
+            <div class="ba-after">
+              <div class="ba-label">✅ After — injectable clock</div>
+              <div class="code-snippet">
+<span class="kw">abstract class</span> <span class="fn">ITickerService</span> {<br>
+&nbsp;&nbsp;Stream&lt;int&gt; tick(Duration interval);<br>
+}<br><br>
+<span class="comment">// Prod: pakai Stream.periodic</span><br>
+<span class="comment">// Test: pakai StreamController manual</span><br>
+SleepTimerBloc(<span class="kw">this</span>._ticker);<br>
+<span class="comment">// → test bisa advance time kapanpun</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="solid-row">
+        <div class="solid-badge solid-d" style="margin-top:2px;">D</div>
+        <div class="solid-row-body">
+          <div class="solid-row-title">
+            <span class="tag tag-medium">Medium</span>
+            <span class="code-ref">AyahBloc</span> mengakses <code>WidgetsBinding.instance.platformDispatcher.locale</code> secara langsung
+          </div>
+          <div class="solid-row-desc">
+            Di <span class="code-ref">_onLoad</span> dan <span class="code-ref">_onToggleTranslation</span>, BLoC memanggil <span class="code-ref">WidgetsBinding.instance.platformDispatcher.locale.languageCode</span> langsung. Ini membuat BLoC bergantung pada Flutter framework layer (bukan Dart murni), menyulitkan unit test yang tidak bisa punya widget binding.
+          </div>
+          <div class="rec-block">
+            <strong>Saran:</strong> Inject locale sebagai parameter event: <span class="code-ref">AyahLoadRequested(surahNumber, locale: Locale('id'))</span>. Atau inject melalui <span class="code-ref">ILocaleProvider</span> abstraction yang di-pass saat pembuatan BLoC, sehingga test bisa memberikan locale apapun tanpa WidgetsBinding.
+          </div>
+        </div>
+      </div>
+
+      <div class="solid-row">
+        <div class="solid-badge solid-d" style="margin-top:2px;">D</div>
+        <div class="solid-row-body">
+          <div class="solid-row-title">
+            <span class="tag tag-medium">Medium</span>
+            <span class="code-ref">QuranRepositoryImpl</span> — strategi caching in-memory di-hardcode
+          </div>
+          <div class="solid-row-desc">
+            Tiga field private (<span class="code-ref">_tracksMemoryCache</span>, <span class="code-ref">_surahsMemoryCache</span>, <span class="code-ref">_recitersMemoryCache</span>) mengimplementasikan strategi caching langsung di dalam repository. Tidak bisa diganti dengan LRU cache, TTL cache, atau no-cache untuk testing tanpa memodifikasi class.
+          </div>
+          <div class="before-after">
+            <div class="ba-before">
+              <div class="ba-label">❌ Before — cache hardcoded</div>
+              <div class="code-snippet">
+<span class="kw">class</span> QuranRepositoryImpl {<br>
+&nbsp;&nbsp;List&lt;Track&gt;? _tracksCache;<br>
+&nbsp;&nbsp;List&lt;Surah&gt;? _surahsCache;<br>
+&nbsp;&nbsp;List&lt;Edition&gt;? _recitersCache;<br>
+&nbsp;&nbsp;<span class="comment">// logic cache tersebar di mana-mana</span><br>
+}
+              </div>
+            </div>
+            <div class="ba-after">
+              <div class="ba-label">✅ After — injectable cache</div>
+              <div class="code-snippet">
+<span class="kw">abstract class</span> <span class="fn">IMemoryCache</span>&lt;T&gt; {<br>
+&nbsp;&nbsp;T? read(<span class="kw">String</span> key);<br>
+&nbsp;&nbsp;<span class="kw">void</span> write(<span class="kw">String</span> key, T value);<br>
+&nbsp;&nbsp;<span class="kw">void</span> invalidate(<span class="kw">String</span> key);<br>
+}<br><br>
+QuranRepositoryImpl(remote, local,<br>
+&nbsp;&nbsp;conn, <span class="kw">this</span>._cache); <span class="comment">// injected</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ──────── OOP GENERAL ──────── -->
+    <div class="solid-section">
+      <div class="solid-section-header">
+        <span class="solid-badge solid-oop">OOP</span>
+        <span class="principle-name">Peningkatan OOP Umum</span>
+        <span style="color:#94a3b8;font-weight:400;font-size:.82rem;">— pola, encapsulation, dan idiom Dart modern</span>
+      </div>
+
+      <div class="solid-row">
+        <div class="solid-badge solid-oop" style="margin-top:2px;">OOP</div>
+        <div class="solid-row-body">
+          <div class="solid-row-title">
+            <span class="tag tag-medium">Medium</span>
+            <span class="code-ref">DurationFormatter</span> dan <span class="code-ref">fuzzyContains</span> — utility class static vs. Extension Methods
+          </div>
+          <div class="solid-row-desc">
+            <span class="code-ref">DurationFormatter</span> adalah class dengan constructor private dan satu static method. <span class="code-ref">fuzzyContains</span> adalah top-level function di <span class="code-ref">search_normalizer.dart</span>. Dart memiliki fitur <strong>extension methods</strong> yang lebih idiomatis untuk kasus ini — membuat kode lebih readable dan object-oriented secara sintaksis.
+          </div>
+          <div class="before-after">
+            <div class="ba-before">
+              <div class="ba-label">❌ Before — static utility</div>
+              <div class="code-snippet">
+<span class="comment">// Pemakaian:</span><br>
+DurationFormatter.format(duration)<br>
+fuzzyContains(surah.name, query)
+              </div>
+            </div>
+            <div class="ba-after">
+              <div class="ba-label">✅ After — extension methods</div>
+              <div class="code-snippet">
+<span class="kw">extension</span> DurationX <span class="kw">on</span> Duration {<br>
+&nbsp;&nbsp;<span class="kw">String</span> formatted() { ... }<br>
+}<br>
+<span class="kw">extension</span> StringSearchX <span class="kw">on</span> <span class="kw">String</span> {<br>
+&nbsp;&nbsp;<span class="kw">bool</span> fuzzyContains(<span class="kw">String</span> q) { ... }<br>
+}<br><br>
+<span class="comment">// Pemakaian lebih natural:</span><br>
+duration.formatted()<br>
+surah.name.fuzzyContains(query)
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="solid-row">
+        <div class="solid-badge solid-oop" style="margin-top:2px;">OOP</div>
+        <div class="solid-row-body">
+          <div class="solid-row-title">
+            <span class="tag tag-medium">Medium</span>
+            <span class="code-ref">AudioPlaybackSnapshot</span> tidak mengimplementasikan <code>Equatable</code>
+          </div>
+          <div class="solid-row-desc">
+            <span class="code-ref">AudioPlaybackSnapshot</span> adalah plain class tanpa <span class="code-ref">Equatable</span> atau <span class="code-ref">==</span> override. Ketika <span class="code-ref">playbackStream</span> memancarkan snapshot dengan nilai yang identik (misalnya dua kali <span class="code-ref">playing: true</span>), <span class="code-ref">PlayerBloc</span> akan tetap menerima event baru dan memanggil <span class="code-ref">emit()</span>. Ini menyebabkan rebuild yang tidak perlu di setiap subscriber PlayerBloc.
+          </div>
+          <div class="before-after">
+            <div class="ba-before">
+              <div class="ba-label">❌ Before — no equality</div>
+              <div class="code-snippet">
+<span class="kw">class</span> AudioPlaybackSnapshot {<br>
+&nbsp;&nbsp;<span class="kw">final bool</span> playing;<br>
+&nbsp;&nbsp;<span class="kw">final bool</span> buffering;<br>
+&nbsp;&nbsp;<span class="kw">final bool</span> completed;<br>
+&nbsp;&nbsp;<span class="comment">// tidak ada == atau Equatable</span><br>
+}
+              </div>
+            </div>
+            <div class="ba-after">
+              <div class="ba-label">✅ After — with Equatable</div>
+              <div class="code-snippet">
+<span class="kw">class</span> AudioPlaybackSnapshot<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">extends</span> Equatable {<br>
+&nbsp;&nbsp;<span class="kw">final bool</span> playing, buffering, completed;<br>
+&nbsp;&nbsp;@override<br>
+&nbsp;&nbsp;List&lt;<span class="kw">Object</span>?&gt; <span class="kw">get</span> props =&gt;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;[playing, buffering, completed];<br>
+}<span class="comment"> // → distinct() bisa filter duplikat</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="solid-row">
+        <div class="solid-badge solid-oop" style="margin-top:2px;">OOP</div>
+        <div class="solid-row-body">
+          <div class="solid-row-title">
+            <span class="tag tag-medium">Medium</span>
+            <span class="code-ref">BookmarkBloc</span> — event chaining internal (<code>add(BookmarkLoadRequested())</code>) menciptakan hidden coupling
+          </div>
+          <div class="solid-row-desc">
+            Handler <span class="code-ref">_onAdd</span> dan <span class="code-ref">_onDelete</span> setelah selesai memanggil <span class="code-ref">add(const BookmarkLoadRequested())</span> untuk reload. Ini adalah event chain tersembunyi yang tidak terlihat dari luar. Jika observer hanya listen ke event <span class="code-ref">BookmarkDeleteRequested</span>, mereka tidak tahu ada reload yang terjadi setelahnya. Lebih baik gunakan update optimistis atau method helper private.
+          </div>
+          <div class="rec-block">
+            <strong>Saran:</strong> Ganti dengan optimistic update — saat delete, langsung emit state baru dengan item dihapus dari list (<span class="code-ref">state.bookmarks.where((b) => b.id != event.id).toList()</span>). Ini lebih predictable, tidak ada hidden event chain, dan respons UI lebih cepat. Jika DB operation gagal, emit state error.
+          </div>
+        </div>
+      </div>
+
+      <div class="solid-row">
+        <div class="solid-badge solid-oop" style="margin-top:2px;">OOP</div>
+        <div class="solid-row-body">
+          <div class="solid-row-title">
+            <span class="tag tag-low">Low</span>
+            <span class="code-ref">DatabaseService._dbVersion</span> — magic number tanpa migration registry
+          </div>
+          <div class="solid-row-desc">
+            <span class="code-ref">static const int _dbVersion = 2</span> tidak memberikan konteks <em>apa yang berubah</em> di setiap versi. Method <span class="code-ref">_onUpgrade</span> dengan blok <span class="code-ref">if (oldVersion &lt; 2)</span> akan semakin panjang dan sulit dibaca seiring bertambahnya versi.
+          </div>
+          <div class="before-after">
+            <div class="ba-before">
+              <div class="ba-label">❌ Before — if-chain migration</div>
+              <div class="code-snippet">
+<span class="kw">static const int</span> _dbVersion = 2;<br><br>
+<span class="kw">Future</span>&lt;<span class="kw">void</span>&gt; _onUpgrade(db, old, new) {<br>
+&nbsp;&nbsp;<span class="kw">if</span> (old &lt; 2) <span class="kw">await</span> _createV2Tables(db);<br>
+&nbsp;&nbsp;<span class="comment">// if (old < 3) await _createV3Tables(db);</span><br>
+&nbsp;&nbsp;<span class="comment">// semakin panjang tiap versi...</span><br>
+}
+              </div>
+            </div>
+            <div class="ba-after">
+              <div class="ba-label">✅ After — migration registry</div>
+              <div class="code-snippet">
+<span class="kw">abstract class</span> <span class="fn">DbMigration</span> {<br>
+&nbsp;&nbsp;<span class="kw">int get</span> targetVersion;<br>
+&nbsp;&nbsp;<span class="kw">Future</span>&lt;<span class="kw">void</span>&gt; run(Database db);<br>
+}<br><br>
+<span class="kw">final</span> _migrations = [<br>
+&nbsp;&nbsp;Migration2(),  <span class="comment">// bookmarks, downloads, ayahs...</span><br>
+&nbsp;&nbsp;Migration3(),  <span class="comment">// starred_ayahs, notes...</span><br>
+];<br>
+<span class="comment">// onUpgrade: run migrations where target &gt; old</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="solid-row">
+        <div class="solid-badge solid-oop" style="margin-top:2px;">OOP</div>
+        <div class="solid-row-body">
+          <div class="solid-row-title">
+            <span class="tag tag-low">Low</span>
+            <span class="code-ref">Surah.fromJson</span> vs <span class="code-ref">Surah.fromMap</span> — dua factory constructor redundan dengan logika serupa
+          </div>
+          <div class="solid-row-desc">
+            <span class="code-ref">Surah</span> memiliki <span class="code-ref">fromJson(Map&lt;String, dynamic&gt;)</span> untuk API response dan <span class="code-ref">fromMap(Map&lt;String, Object?&gt;)</span> untuk SQLite row. Kedua method hampir identik, hanya berbeda di type signature. Ini violates DRY dan membuat pemeliharaan double — perubahan field harus diupdate di dua tempat.
+          </div>
+          <div class="rec-block">
+            <strong>Saran:</strong> Gunakan satu factory <span class="code-ref">Surah.fromMap(Map&lt;String, dynamic&gt;)</span> yang melayani kedua sumber. SQLite rows dan JSON sama-sama <span class="code-ref">Map&lt;String, dynamic&gt;</span> di Dart — field name dari API sudah sesuai dengan kolom DB (<span class="code-ref">englishName</span>, <span class="code-ref">numberOfAyahs</span>, dll), sehingga satu deserializer sudah cukup.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SOLID Scorecard -->
+    <div style="margin-top:8px;">
+      <div class="section-title" style="font-size:1rem;border:none;padding-bottom:0;margin-bottom:14px;">
+        <div class="icon" style="width:28px;height:28px;font-size:14px;">📋</div>
+        SOLID Scorecard — Kondisi Saat Ini
+      </div>
+      <table class="priority-table">
+        <thead>
+          <tr>
+            <th>Prinsip</th>
+            <th>Nilai</th>
+            <th>Kekuatan</th>
+            <th>Yang Perlu Diperbaiki</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="solid-badge solid-s">S</span> <strong>Single Responsibility</strong></td>
+            <td><span class="pill pill-p3">7 / 10</span></td>
+            <td>BLoC per-fitur sudah terfokus; interface terpisah per layer</td>
+            <td><code>_composeTracks</code> side effect; <code>DownloadServiceImpl</code> terlalu gemuk</td>
+          </tr>
+          <tr>
+            <td><span class="solid-badge solid-o">O</span> <strong>Open/Closed</strong></td>
+            <td><span class="pill pill-p3">6 / 10</span></td>
+            <td><code>AppException</code> sealed hierarchy mudah di-extend</td>
+            <td><code>_featuredReciters</code> hardcoded; error mapper if-chain</td>
+          </tr>
+          <tr>
+            <td><span class="solid-badge solid-l">L</span> <strong>Liskov Substitution</strong></td>
+            <td><span class="pill pill-p4">8 / 10</span></td>
+            <td><code>NoOpCloudSyncService</code> implementasi stub yang benar</td>
+            <td>Silent fallback di <code>JustAudioPlayerService.load()</code></td>
+          </tr>
+          <tr>
+            <td><span class="solid-badge solid-i">I</span> <strong>Interface Segregation</strong></td>
+            <td><span class="pill pill-p3">7 / 10</span></td>
+            <td>Setiap layer punya interface sendiri (IRepo, IDataSource, IService)</td>
+            <td><code>IQuranRepository</code> 5 method; <code>IAudioPlayerService</code> mixed concern</td>
+          </tr>
+          <tr>
+            <td><span class="solid-badge solid-d">D</span> <strong>Dependency Inversion</strong></td>
+            <td><span class="pill pill-p3">7 / 10</span></td>
+            <td>GetIt + interface injection di semua layer; <code>http.Client</code> injectable</td>
+            <td><code>SleepTimerBloc</code> Timer langsung; AyahBloc→WidgetsBinding coupling</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  <!-- ═══ SECTION 8: PRIORITY TABLE ═══ -->
+  <div class="section" id="priority">
+    <div class="section-title">
+      <div class="icon">📊</div>
+      Tabel Prioritas — Semua Item (35 total)
+    </div>
+    <table class="priority-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Item</th>
+          <th>Kategori</th>
+          <th>Prioritas</th>
+          <th>Estimasi Effort</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>Fix: Sleep timer "End of Surah" tidak berfungsi</td>
+          <td><span class="tag tag-bug" style="margin:0">Bug</span></td>
+          <td><span class="pill pill-p1">P1 — Critical</span></td>
+          <td>~1 jam</td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td>Fix: Throttle DB write pada download progress</td>
+          <td><span class="tag tag-perf" style="margin:0">Performance</span></td>
+          <td><span class="pill pill-p1">P1 — Critical</span></td>
+          <td>~2 jam</td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td>UX: Hapus reciter picker wajib — play langsung dengan reciter terakhir</td>
+          <td><span class="tag tag-ux" style="margin:0">UX</span></td>
+          <td><span class="pill pill-p2">P2 — High</span></td>
+          <td>~3 jam</td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td>Performance: Debounce scroll di AyahView</td>
+          <td><span class="tag tag-perf" style="margin:0">Performance</span></td>
+          <td><span class="pill pill-p2">P2 — High</span></td>
+          <td>~1 jam</td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td>UX: Pindahkan Bookmark ke dedicated screen / panel</td>
+          <td><span class="tag tag-ux" style="margin:0">UX</span></td>
+          <td><span class="pill pill-p2">P2 — High</span></td>
+          <td>~1 hari</td>
+        </tr>
+        <tr>
+          <td>6</td>
+          <td>UX: Tombol next/previous surah di player panel</td>
+          <td><span class="tag tag-ux" style="margin:0">UX</span></td>
+          <td><span class="pill pill-p2">P2 — High</span></td>
+          <td>~1 hari</td>
+        </tr>
+        <tr>
+          <td>7</td>
+          <td>Performance: Aktifkan <code>itemExtent</code> di SurahTile ListView</td>
+          <td><span class="tag tag-perf" style="margin:0">Performance</span></td>
+          <td><span class="pill pill-p3">P3 — Medium</span></td>
+          <td>~30 menit</td>
+        </tr>
+        <tr>
+          <td>8</td>
+          <td>UX: Indikator status offline (snackbar/banner)</td>
+          <td><span class="tag tag-ux" style="margin:0">UX</span></td>
+          <td><span class="pill pill-p3">P3 — Medium</span></td>
+          <td>~2 jam</td>
+        </tr>
+        <tr>
+          <td>9</td>
+          <td>Fitur: Repeat mode &amp; auto-next surah</td>
+          <td><span class="tag tag-feature" style="margin:0">Feature</span></td>
+          <td><span class="pill pill-p3">P3 — Medium</span></td>
+          <td>~1 hari</td>
+        </tr>
+        <tr>
+          <td>10</td>
+          <td>Fitur: Download langsung dari player panel</td>
+          <td><span class="tag tag-feature" style="margin:0">Feature</span></td>
+          <td><span class="pill pill-p3">P3 — Medium</span></td>
+          <td>~3 jam</td>
+        </tr>
+        <tr>
+          <td>11</td>
+          <td>UX: Header AyahView menampilkan nama surah lengkap</td>
+          <td><span class="tag tag-ux" style="margin:0">UX</span></td>
+          <td><span class="pill pill-p3">P3 — Medium</span></td>
+          <td>~1 jam</td>
+        </tr>
+        <tr>
+          <td>12</td>
+          <td>Performance: Throttle position stream di AudioPlayerService</td>
+          <td><span class="tag tag-perf" style="margin:0">Performance</span></td>
+          <td><span class="pill pill-p4">P4 — Low</span></td>
+          <td>~1 jam</td>
+        </tr>
+        <tr>
+          <td>13</td>
+          <td>Fitur: Navigasi per Juz di search screen</td>
+          <td><span class="tag tag-feature" style="margin:0">Feature</span></td>
+          <td><span class="pill pill-p4">P4 — Low</span></td>
+          <td>~2 hari</td>
+        </tr>
+        <tr>
+          <td>14</td>
+          <td>Fitur: Cloud sync bookmark (Firebase/Supabase)</td>
+          <td><span class="tag tag-feature" style="margin:0">Feature</span></td>
+          <td><span class="pill pill-p4">P4 — Low</span></td>
+          <td>~1 minggu</td>
+        </tr>
+        <tr>
+          <td>15</td>
+          <td>Fitur: Full-text search isi ayah (SQLite FTS5)</td>
+          <td><span class="tag tag-feature" style="margin:0">Feature</span></td>
+          <td><span class="pill pill-p4">P4 — Low</span></td>
+          <td>~3 hari</td>
+        </tr>
+        <tr style="background:#f0fdf4;">
+          <td colspan="5" style="padding:10px 16px;font-weight:700;color:#065f46;font-size:.8rem;text-transform:uppercase;letter-spacing:.5px;">
+            💾 Fitur Local Storage (DB Migration v2 → v3)
+          </td>
+        </tr>
+        <tr>
+          <td>16</td>
+          <td>Local: Pre-download teks ayah offline penuh (bulk insert ke tabel <code>ayahs</code>)</td>
+          <td><span class="tag tag-feature" style="margin:0">Feature</span></td>
+          <td><span class="pill pill-p2">P2 — High</span></td>
+          <td>~2 hari</td>
+        </tr>
+        <tr>
+          <td>17</td>
+          <td>Local: Reading progress per surah — resume ayah terakhir dibaca</td>
+          <td><span class="tag tag-feature" style="margin:0">Feature</span></td>
+          <td><span class="pill pill-p2">P2 — High</span></td>
+          <td>~1 hari</td>
+        </tr>
+        <tr>
+          <td>18</td>
+          <td>Local: Storage Manager — tampilkan ukuran cache &amp; download, hapus per-surah</td>
+          <td><span class="tag tag-feature" style="margin:0">Feature</span></td>
+          <td><span class="pill pill-p2">P2 — High</span></td>
+          <td>~1 hari</td>
+        </tr>
+        <tr>
+          <td>19</td>
+          <td>Local: Starred Ayahs — tandai ayah individual, simpan ke tabel <code>starred_ayahs</code></td>
+          <td><span class="tag tag-feature" style="margin:0">Feature</span></td>
+          <td><span class="pill pill-p3">P3 — Medium</span></td>
+          <td>~1.5 hari</td>
+        </tr>
+        <tr>
+          <td>20</td>
+          <td>Local: Playlist kustom — urutan surah tersimpan di tabel <code>playlists</code></td>
+          <td><span class="tag tag-feature" style="margin:0">Feature</span></td>
+          <td><span class="pill pill-p3">P3 — Medium</span></td>
+          <td>~2 hari</td>
+        </tr>
+        <tr>
+          <td>21</td>
+          <td>Local: Statistik ibadah harian (listening history, streak) di tabel <code>listening_history</code></td>
+          <td><span class="tag tag-feature" style="margin:0">Feature</span></td>
+          <td><span class="pill pill-p3">P3 — Medium</span></td>
+          <td>~2 hari</td>
+        </tr>
+        <tr>
+          <td>22</td>
+          <td>Local: Catatan pribadi per ayah — tabel <code>ayah_notes</code></td>
+          <td><span class="tag tag-feature" style="margin:0">Feature</span></td>
+          <td><span class="pill pill-p4">P4 — Low</span></td>
+          <td>~1.5 hari</td>
+        </tr>
+        <tr>
+          <td>23</td>
+          <td>Local: Export &amp; Import backup JSON ke file lokal device</td>
+          <td><span class="tag tag-feature" style="margin:0">Feature</span></td>
+          <td><span class="pill pill-p4">P4 — Low</span></td>
+          <td>~1 hari</td>
+        </tr>
+        <tr style="background:#f8fafc;">
+          <td colspan="5" style="padding:10px 16px;font-weight:700;color:#1e293b;font-size:.8rem;text-transform:uppercase;letter-spacing:.5px;">
+            🧱 Refactor OOP &amp; SOLID
+          </td>
+        </tr>
+        <tr>
+          <td>24</td>
+          <td><strong>[S]</strong> Ekstrak <code>_composeTracks</code> side effect → value object <code>_ComposedData</code></td>
+          <td><span class="tag tag-perf" style="margin:0">Refactor</span></td>
+          <td><span class="pill pill-p2">P2 — High</span></td>
+          <td>~2 jam</td>
+        </tr>
+        <tr>
+          <td>25</td>
+          <td><strong>[O+S]</strong> Ekstrak <code>AudioErrorMapper</code> dari PlayerBloc — Chain of Responsibility</td>
+          <td><span class="tag tag-perf" style="margin:0">Refactor</span></td>
+          <td><span class="pill pill-p2">P2 — High</span></td>
+          <td>~3 jam</td>
+        </tr>
+        <tr>
+          <td>26</td>
+          <td><strong>[D]</strong> Inject <code>ITickerService</code> ke SleepTimerBloc — eliminasi <code>Timer</code> langsung</td>
+          <td><span class="tag tag-perf" style="margin:0">Refactor</span></td>
+          <td><span class="pill pill-p2">P2 — High</span></td>
+          <td>~2 jam</td>
+        </tr>
+        <tr>
+          <td>27</td>
+          <td><strong>[I]</strong> Pecah <code>IQuranRepository</code> → <code>ISurahRepository</code> + <code>IEditionRepository</code></td>
+          <td><span class="tag tag-perf" style="margin:0">Refactor</span></td>
+          <td><span class="pill pill-p3">P3 — Medium</span></td>
+          <td>~2 jam</td>
+        </tr>
+        <tr>
+          <td>28</td>
+          <td><strong>[O]</strong> Inject <code>AppConfig.featuredReciterIds</code> ke QuranRepositoryImpl</td>
+          <td><span class="tag tag-perf" style="margin:0">Refactor</span></td>
+          <td><span class="pill pill-p3">P3 — Medium</span></td>
+          <td>~1 jam</td>
+        </tr>
+        <tr>
+          <td>29</td>
+          <td><strong>[OOP]</strong> Ganti <code>DurationFormatter</code> + <code>fuzzyContains</code> → Dart extension methods</td>
+          <td><span class="tag tag-perf" style="margin:0">Refactor</span></td>
+          <td><span class="pill pill-p3">P3 — Medium</span></td>
+          <td>~1 jam</td>
+        </tr>
+        <tr>
+          <td>30</td>
+          <td><strong>[OOP]</strong> Tambah <code>Equatable</code> ke <code>AudioPlaybackSnapshot</code></td>
+          <td><span class="tag tag-perf" style="margin:0">Refactor</span></td>
+          <td><span class="pill pill-p3">P3 — Medium</span></td>
+          <td>~30 menit</td>
+        </tr>
+        <tr>
+          <td>31</td>
+          <td><strong>[I]</strong> Pecah <code>IAudioPlayerService</code> → <code>IAudioTransport</code> + <code>IAudioObserver</code></td>
+          <td><span class="tag tag-perf" style="margin:0">Refactor</span></td>
+          <td><span class="pill pill-p3">P3 — Medium</span></td>
+          <td>~2 jam</td>
+        </tr>
+        <tr>
+          <td>32</td>
+          <td><strong>[D]</strong> Inject <code>IMemoryCache</code> ke QuranRepositoryImpl — hilangkan 3 field cache hardcoded</td>
+          <td><span class="tag tag-perf" style="margin:0">Refactor</span></td>
+          <td><span class="pill pill-p4">P4 — Low</span></td>
+          <td>~3 jam</td>
+        </tr>
+        <tr>
+          <td>33</td>
+          <td><strong>[OOP]</strong> Buat <code>DbMigration</code> registry — ganti if-chain di <code>DatabaseService._onUpgrade</code></td>
+          <td><span class="tag tag-perf" style="margin:0">Refactor</span></td>
+          <td><span class="pill pill-p4">P4 — Low</span></td>
+          <td>~2 jam</td>
+        </tr>
+        <tr>
+          <td>34</td>
+          <td><strong>[OOP]</strong> Merge <code>Surah.fromJson</code> + <code>Surah.fromMap</code> → satu deserializer</td>
+          <td><span class="tag tag-perf" style="margin:0">Refactor</span></td>
+          <td><span class="pill pill-p4">P4 — Low</span></td>
+          <td>~1 jam</td>
+        </tr>
+        <tr>
+          <td>35</td>
+          <td><strong>[D]</strong> Pass locale via event/constructor ke AyahBloc — hilangkan <code>WidgetsBinding</code> dependency</td>
+          <td><span class="tag tag-perf" style="margin:0">Refactor</span></td>
+          <td><span class="pill pill-p4">P4 — Low</span></td>
+          <td>~1 jam</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</div><!-- /container -->
+
+<footer>
+  <div class="container">
+    <strong>Quran Player — Code Review Report</strong> &nbsp;•&nbsp; Generated Juni 2026 &nbsp;•&nbsp; Flutter v3 • Dart SDK ^3.11.5
+  </div>
+</footer>
+
+</body>
+</html>

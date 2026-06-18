@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quran Player — Analisa Keseluruhan, Teknologi & Arsitektur</title>
+<style>
+:root {
+  --green: #0F7C5A; --green-dark: #0A4D38; --green-light: #e6f4ef;
+  --gold: #E5B25D; --red: #d93025; --red-light: #fce8e6;
+  --orange: #f4811f; --orange-light:#fef3e2;
+  --blue: #1a73e8; --blue-light: #e8f0fe;
+  --purple: #7c3aed; --purple-light:#f3e8ff;
+  --text: #1a1a2e; --text-2: #4a5568; --border: #e2e8f0;
+  --bg: #f8fafb; --white: #ffffff; --card-shadow: 0 2px 12px rgba(0,0,0,.07);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); line-height: 1.65; }
+.hero { background: linear-gradient(135deg, var(--green) 0%, var(--green-dark) 100%); color: #fff; padding: 52px 40px 48px; position: relative; overflow: hidden; }
+.hero::before { content: '﴿ قُرْآن ﴾'; position: absolute; right: 40px; top: 50%; transform: translateY(-50%); font-size: 80px; opacity: .12; font-family: serif; pointer-events: none; }
+.hero h1 { font-size: 2rem; font-weight: 800; margin-bottom: 6px; }
+.hero .subtitle { opacity: .85; font-size: 1rem; max-width: 620px; }
+.hero .meta { margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap; }
+.hero .badge { background: rgba(255,255,255,.18); border-radius: 20px; padding: 4px 14px; font-size: .82rem; font-weight: 600; }
+.container { max-width: 1020px; margin: 0 auto; padding: 0 24px; }
+.summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin: 36px 0 12px; }
+.summary-card { background: var(--white); border-radius: 16px; padding: 20px 22px; box-shadow: var(--card-shadow); border-left: 4px solid var(--green); }
+.summary-card.red { border-color: var(--red); }
+.summary-card.orange{ border-color: var(--orange); }
+.summary-card.blue { border-color: var(--blue); }
+.summary-card.gold { border-color: var(--gold); }
+.summary-card .num { font-size: 2.1rem; font-weight: 800; line-height: 1; }
+.summary-card .label{ font-size: .76rem; color: var(--text-2); margin-top: 4px; text-transform: uppercase; letter-spacing: .5px; }
+.section { margin: 44px 0; }
+.section-title { display: flex; align-items: center; gap: 10px; font-size: 1.25rem; font-weight: 800; color: var(--green-dark); margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid var(--green-light); }
+.section-title .icon { width: 34px; height: 34px; background: var(--green-light); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+p.lead { font-size: .95rem; color: var(--text-2); margin-bottom: 18px; }
+p.lead strong { color: var(--text); }
+/* verdict table */
+.verdict-table, .priority-table, .dep-table { width: 100%; border-collapse: collapse; font-size: .87rem; background: var(--white); border-radius: 14px; overflow: hidden; box-shadow: var(--card-shadow); margin-bottom: 14px; }
+.verdict-table th, .priority-table th, .dep-table th { background: var(--green-dark); color: #fff; padding: 12px 16px; text-align: left; font-weight: 700; font-size: .78rem; text-transform: uppercase; letter-spacing: .5px; }
+.verdict-table td, .priority-table td, .dep-table td { padding: 11px 16px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.verdict-table tr:last-child td, .priority-table tr:last-child td, .dep-table tr:last-child td { border-bottom: none; }
+.verdict-table tr:hover td, .priority-table tr:hover td, .dep-table tr:hover td { background: #f8fafc; }
+.score { display:inline-flex; align-items:center; gap:8px; font-weight:800; }
+.score-bar { width:70px; height:8px; border-radius:6px; background:var(--border); overflow:hidden; display:inline-block; }
+.score-bar > span { display:block; height:100%; border-radius:6px; }
+.pill { display: inline-block; border-radius: 12px; padding: 2px 10px; font-size: .73rem; font-weight: 700; white-space: nowrap; }
+.pill-good { background:#f0fdf4; color:#15803d; }
+.pill-warn { background:#fff7ed; color:#c2410c; }
+.pill-bad { background:#fef2f2; color:#dc2626; }
+.pill-info { background: var(--blue-light); color: var(--blue); }
+.pill-p1 { background: #fef2f2; color: #dc2626; }
+.pill-p2 { background: #fff7ed; color: #c2410c; }
+.pill-p3 { background: #eff6ff; color: #1d4ed8; }
+.pill-p4 { background: #f0fdf4; color: #15803d; }
+/* issue card */
+.issue-card { background: var(--white); border-radius: 16px; box-shadow: var(--card-shadow); margin-bottom: 16px; overflow: hidden; }
+.issue-header { display: flex; align-items: flex-start; gap: 14px; padding: 18px 20px 14px; }
+.severity-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; margin-top: 6px; }
+.sev-critical { background: var(--red); }
+.sev-high { background: var(--orange); }
+.sev-medium { background: var(--blue); }
+.sev-low { background: #9e9e9e; }
+.issue-title { font-weight: 700; font-size: 1rem; margin-bottom: 4px; }
+.issue-desc { font-size: .88rem; color: var(--text-2); line-height: 1.6; }
+.issue-body { padding: 0 20px 18px; }
+.tag { display: inline-block; font-size: .7rem; font-weight: 700; border-radius: 6px; padding: 2px 9px; text-transform: uppercase; letter-spacing: .4px; margin-right: 6px; margin-bottom: 6px; }
+.tag-critical { background: var(--red-light); color: var(--red); }
+.tag-high { background: var(--orange-light); color: var(--orange); }
+.tag-medium { background: var(--blue-light); color: var(--blue); }
+.tag-tech { background: var(--purple-light); color: var(--purple); }
+.tag-arch { background: #ecfdf5; color: #065f46; }
+.tag-test { background: #fff1f2; color: #be123c; }
+.code-ref { font-family: 'Courier New', Courier, monospace; background: #f1f5f9; border-radius: 6px; padding: 2px 7px; font-size: .8rem; color: #334155; }
+.rec-block { background: var(--green-light); border-radius: 10px; padding: 12px 16px; margin-top: 12px; font-size: .87rem; }
+.rec-block strong { color: var(--green-dark); }
+.good-block { background: #f0fdf4; border-radius: 10px; padding: 12px 16px; margin-top: 12px; font-size: .87rem; border-left: 3px solid #16a34a; }
+.good-block strong { color: #15803d; }
+.two-col { display:grid; grid-template-columns: 1fr 1fr; gap:16px; }
+@media (max-width: 760px){ .two-col{ grid-template-columns: 1fr; } .verdict-table, .priority-table, .dep-table { font-size: .78rem; } }
+.callout-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(260px,1fr)); gap:14px; margin-top: 8px; }
+.callout { background: var(--white); border-radius: 14px; padding: 16px 18px; box-shadow: var(--card-shadow); border-top: 3px solid var(--green); }
+.callout.warn { border-color: var(--orange); }
+.callout h4 { font-size: .92rem; font-weight: 700; margin-bottom: 6px; }
+.callout p { font-size: .83rem; color: var(--text-2); }
+footer { text-align:center; padding: 36px 24px 50px; color: var(--text-2); font-size: .8rem; }
+ul.compact { margin: 8px 0 0 18px; font-size: .87rem; color: var(--text-2); }
+ul.compact li { margin-bottom: 6px; }
+ul.compact strong { color: var(--text); }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="container">
+    <h1>📊 Quran Player — Analisa Keseluruhan, Teknologi &amp; Arsitektur</h1>
+    <p class="subtitle">Tinjauan menyeluruh terhadap kondisi proyek: kesehatan keseluruhan, kelayakan tech stack, kekokohan arsitektur, serta kesiapan testing &amp; CI/CD — berdasarkan code review penuh atas codebase saat ini (±8.400 baris kode Dart).</p>
+    <div class="meta">
+      <span class="badge">Flutter • Dart SDK ^3.11.5</span>
+      <span class="badge">v1.0.0+1</span>
+      <span class="badge">Clean Architecture + BLoC</span>
+      <span class="badge">📅 Juni 2026</span>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+  <div class="summary-grid">
+    <div class="summary-card">
+      <div class="num">7.2 / 10</div>
+      <div class="label">Skor kesehatan keseluruhan</div>
+    </div>
+    <div class="summary-card orange">
+      <div class="num">2</div>
+      <div class="label">Dependency berisiko (beta / unconstrained)</div>
+    </div>
+    <div class="summary-card red">
+      <div class="num">~5%</div>
+      <div class="label">Rasio baris kode test : kode app</div>
+    </div>
+    <div class="summary-card blue">
+      <div class="num">0</div>
+      <div class="label">Pipeline CI/CD aktif</div>
+    </div>
+  </div>
+
+  <!-- ===================== OVERALL ===================== -->
+  <div class="section">
+    <div class="section-title"><span class="icon">🧭</span> Ringkasan Keseluruhan</div>
+    <p class="lead">Secara umum, <strong>Quran Player berdiri di atas fondasi yang kuat</strong> — Clean Architecture yang konsisten, keamanan jaringan yang sudah di-hardening, dan disiplin lint yang ketat. Yang membuat skor keseluruhan belum sempurna bukan masalah desain besar, melainkan <strong>celah eksekusi</strong>: cakupan test yang tipis, belum ada pipeline CI/CD, satu dependency beta yang dipakai di produksi, dan sejumlah refinement SOLID/OOP yang masih tertunda. Tidak ada "bom waktu" arsitektural — semua temuan bersifat <em>perbaikan</em>, bukan <em>perombakan</em>.</p>
+
+    <table class="verdict-table">
+      <tr><th>Aspek</th><th>Skor</th><th>Catatan singkat</th></tr>
+      <tr>
+        <td><strong>Arsitektur &amp; Clean Code</strong></td>
+        <td><span class="score">8.0<span class="score-bar"><span style="width:80%;background:var(--green)"></span></span></span></td>
+        <td>Layering rapi (core/data/features/shared), interface-driven, DI terpusat via <span class="code-ref">get_it</span>, <span class="code-ref">Result&lt;T&gt;</span> sealed type. Beberapa pelanggaran SOLID kecil di level class.</td>
+      </tr>
+      <tr>
+        <td><strong>UI / UX</strong></td>
+        <td><span class="score">6.5<span class="score-bar"><span style="width:65%;background:var(--gold)"></span></span></span></td>
+        <td>Material 3 polish sudah bagus (gradient header, shimmer, animasi player), tapi ada friksi alur (reciter picker wajib, bookmark tersembunyi, tidak ada next/prev). <em>Lihat laporan UX terpisah untuk detail.</em></td>
+      </tr>
+      <tr>
+        <td><strong>Tech Stack &amp; Dependency</strong></td>
+        <td><span class="score">7.0<span class="score-bar"><span style="width:70%;background:var(--gold)"></span></span></span></td>
+        <td>Mayoritas paket versi stabil &amp; mutakhir. 2 flag: paket beta di produksi dan satu dependency tanpa batas versi (<span class="code-ref">any</span>).</td>
+      </tr>
+      <tr>
+        <td><strong>Testing</strong></td>
+        <td><span class="score">3.5<span class="score-bar"><span style="width:35%;background:var(--red)"></span></span></span></td>
+        <td>Hanya 6 file test (~411 baris) untuk ~8.400 baris kode aplikasi. Tidak ada widget test, golden test, atau integration test.</td>
+      </tr>
+      <tr>
+        <td><strong>Keamanan</strong></td>
+        <td><span class="score">9.0<span class="score-bar"><span style="width:90%;background:var(--green)"></span></span></span></td>
+        <td>HTTPS-only enforced di 3 lapis (AppConfig assert, Android NSC, iOS ATS), backup dimatikan, R8/ProGuard aktif. Salah satu titik terkuat proyek ini.</td>
+      </tr>
+      <tr>
+        <td><strong>CI/CD &amp; Tooling</strong></td>
+        <td><span class="score">2.0<span class="score-bar"><span style="width:20%;background:var(--red)"></span></span></span></td>
+        <td>Folder <span class="code-ref">.github/</span> ada tapi hanya berisi instruksi Copilot &amp; git hooks — <strong>tidak ada workflow CI</strong> (analyze/test/build) yang berjalan otomatis.</td>
+      </tr>
+    </table>
+
+    <div class="callout-grid">
+      <div class="callout">
+        <h4>✅ Kekuatan utama</h4>
+        <p>Clean Architecture yang benar-benar diikuti (bukan sekadar folder kosong), offline-first dengan cache-first repository, error handling lewat <span class="code-ref">Result&lt;T&gt;</span> &amp; <span class="code-ref">AppException</span> hierarchy, lint rules ketat (<span class="code-ref">strict-casts</span>, <span class="code-ref">strict-inference</span>), dan hardening keamanan yang jarang ditemukan di technical-test app.</p>
+      </div>
+      <div class="callout warn">
+        <h4>⚠️ Area yang paling butuh perhatian</h4>
+        <p>Dalam urutan dampak: (1) tidak ada CI/CD — risiko regresi lolos ke produksi, (2) cakupan test sangat tipis terutama untuk BLoC kompleks (Player, Download, Search), (3) dependency beta <span class="code-ref">just_audio_background</span> yang bisa berubah API sewaktu-waktu, (4) sejumlah refinement SOLID yang membuat kode makin sulit di-test seiring waktu.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== TECH STACK ===================== -->
+  <div class="section">
+    <div class="section-title"><span class="icon">🧩</span> Analisa Teknologi &amp; Dependency</div>
+    <p class="lead">Tech stack secara keseluruhan adalah pilihan yang <strong>tepat dan modern</strong> untuk skala aplikasi ini — <span class="code-ref">flutter_bloc</span> v9, <span class="code-ref">get_it</span> untuk DI, <span class="code-ref">just_audio</span> untuk audio, <span class="code-ref">sqflite</span> untuk cache lokal. Dari 16 dependency, <strong>2 di antaranya perlu perhatian</strong>:</p>
+
+    <table class="dep-table">
+      <tr><th>Paket</th><th>Versi</th><th>Status</th><th>Catatan</th></tr>
+      <tr><td><span class="code-ref">flutter_bloc</span></td><td>^9.1.1</td><td><span class="pill pill-good">OK</span></td><td>Versi major terbaru, dipakai konsisten di semua fitur.</td></tr>
+      <tr><td><span class="code-ref">get_it</span></td><td>^9.2.1</td><td><span class="pill pill-good">OK</span></td><td>Composition root tunggal &amp; rapi di <span class="code-ref">service_locator.dart</span>.</td></tr>
+      <tr><td><span class="code-ref">just_audio</span></td><td>^0.10.5</td><td><span class="pill pill-good">OK</span></td><td>Stabil, fitur lengkap (cache, speed control).</td></tr>
+      <tr><td><span class="code-ref">just_audio_background</span></td><td>^0.0.1-beta.17</td><td><span class="pill pill-bad">Perlu ditinjau</span></td><td><strong>Pre-release/beta package dipakai di app produksi.</strong> Versi <span class="code-ref">0.0.x-beta</span> bisa memuat breaking change tanpa peringatan semver biasa, dan tidak punya jaminan stabilitas pub.dev. Lock ke versi exact (bukan <span class="code-ref">^</span>) dan pantau rilis stabil.</td></tr>
+      <tr><td><span class="code-ref">intl</span></td><td><strong>any</strong></td><td><span class="pill pill-bad">Perlu ditinjau</span></td><td><strong>Constraint <span class="code-ref">any</span> = tanpa batas versi.</strong> Berisiko resolve ke versi yang tidak kompatibel dengan <span class="code-ref">flutter_localizations</span> (sering jadi sumber error <em>"intl version solving failed"</em> setelah <span class="code-ref">flutter upgrade</span>). Sebaiknya dikunci eksplisit, contoh <span class="code-ref">intl: ^0.19.0</span> sesuai SDK Flutter yang dipakai.</td></tr>
+      <tr><td><span class="code-ref">sqflite</span></td><td>^2.4.2+1</td><td><span class="pill pill-good">OK</span></td><td>Stabil, cocok untuk cache metadata + tabel custom.</td></tr>
+      <tr><td><span class="code-ref">connectivity_plus</span></td><td>^7.1.1</td><td><span class="pill pill-good">OK</span></td><td>Versi major terbaru.</td></tr>
+      <tr><td><span class="code-ref">flutter_local_notifications</span></td><td>^18.0.0</td><td><span class="pill pill-good">OK</span></td><td>Mutakhir; cocok untuk fitur notifikasi download yang direkomendasikan.</td></tr>
+      <tr><td><span class="code-ref">permission_handler</span>, <span class="code-ref">timezone</span>, <span class="code-ref">path_provider</span>, <span class="code-ref">http</span></td><td>—</td><td><span class="pill pill-good">OK</span></td><td>Semua pada rentang versi wajar &amp; aktif maintain.</td></tr>
+    </table>
+
+    <div class="issue-card">
+      <div class="issue-header">
+        <span class="severity-dot sev-medium"></span>
+        <div>
+          <div class="issue-title">Tidak ada pipeline CI/CD — folder <span class="code-ref">.github/</span> ada tapi kosong dari workflow</div>
+          <div class="issue-desc">Repo memiliki <span class="code-ref">.github/copilot-instructions.md</span> dan <span class="code-ref">.github/hooks/</span>, tapi <strong>tidak ada file workflow</strong> (mis. <span class="code-ref">.github/workflows/ci.yml</span>) yang menjalankan <span class="code-ref">flutter analyze</span>, <span class="code-ref">flutter test</span>, atau build check secara otomatis pada setiap push/PR. Artinya regresi (termasuk lint error yang sudah dipromosikan jadi error di <span class="code-ref">analysis_options.yaml</span>) hanya akan ketahuan saat dijalankan manual.</div>
+        </div>
+      </div>
+      <div class="issue-body">
+        <span class="tag tag-tech">Tech / Tooling</span><span class="tag tag-medium">Medium-High</span>
+        <div class="rec-block"><strong>Rekomendasi:</strong> Tambahkan workflow GitHub Actions minimal 3 langkah: <span class="code-ref">flutter pub get</span> → <span class="code-ref">flutter analyze</span> → <span class="code-ref">flutter test --coverage</span>, dijalankan pada setiap <span class="code-ref">push</span> dan <span class="code-ref">pull_request</span> ke <span class="code-ref">main</span>. Tambahkan job build APK/IPA debug sebagai smoke-test opsional. Effort: ~2 jam.</div>
+      </div>
+    </div>
+
+    <div class="issue-card">
+      <div class="issue-header">
+        <span class="severity-dot sev-low"></span>
+        <div>
+          <div class="issue-title">Lokalisasi baru mencakup 2 bahasa (EN + ID)</div>
+          <div class="issue-desc">Sudah ada infrastruktur <span class="code-ref">gen-l10n</span> dengan file <span class="code-ref">.arb</span> yang rapi — fondasinya benar. Namun untuk aplikasi Quran dengan audiens global, dukungan bahasa Arab (RTL), Urdu, Melayu, atau Turki akan memperluas jangkauan secara signifikan tanpa perubahan arsitektural.</div>
+        </div>
+      </div>
+      <div class="issue-body">
+        <span class="tag tag-tech">Tech / i18n</span><span class="tag tag-medium">Low priority</span>
+        <div class="rec-block"><strong>Rekomendasi:</strong> Tambah file <span class="code-ref">app_ar.arb</span>, <span class="code-ref">app_ur.arb</span>, dst., dan uji layout RTL (terutama <span class="code-ref">PlayerPanel</span> &amp; <span class="code-ref">AyahView</span> yang sudah menampilkan teks Arab — pastikan widget arah-netral).</div>
+      </div>
+    </div>
+
+    <div class="good-block">
+      <strong>✅ Hal positif yang patut dipertahankan:</strong> Konfigurasi environment lewat <span class="code-ref">--dart-define</span> + <span class="code-ref">AppConfig.fromEnvironment()</span> dengan guard <span class="code-ref">_assertHttpsOnly()</span> adalah pola yang sangat baik — tidak ada secret/URL hardcoded, dan release build akan gagal start jika endpoint bukan HTTPS. SDK constraint <span class="code-ref">^3.11.5</span> juga konsisten dengan <span class="code-ref">.metadata</span>.
+    </div>
+  </div>
+
+  <!-- ===================== ARCHITECTURE ===================== -->
+  <div class="section">
+    <div class="section-title"><span class="icon">🏗️</span> Analisa Arsitektur</div>
+    <p class="lead">Struktur proyek mengikuti <strong>Clean Architecture</strong> empat lapis (<span class="code-ref">core / data / features / shared</span>) dengan <strong>37 file di data layer, 18 di features, 12 di core</strong> — proporsi yang sehat untuk app berskala menengah. Setiap boundary dijembatani lewat interface (<span class="code-ref">IQuranRepository</span>, <span class="code-ref">IAudioPlayerService</span>, dst.), dan seluruh wiring terjadi di satu <em>composition root</em>: <span class="code-ref">service_locator.dart</span>. Ini adalah eksekusi arsitektur yang jauh di atas rata-rata untuk ukuran proyek ini.</p>
+
+    <div class="two-col">
+      <div class="callout">
+        <h4>✅ Yang sudah berjalan baik</h4>
+        <ul class="compact">
+          <li><strong>Single composition root</strong> — semua dependency diregister sekali di <span class="code-ref">configureDependencies()</span>, tidak ada <span class="code-ref">sl&lt;T&gt;()</span> tersebar di luar layer DI.</li>
+          <li><strong>Result&lt;T&gt; sealed type</strong> — tidak ada return nullable untuk error path; <span class="code-ref">Success</span>/<span class="code-ref">Failure</span> eksplisit di setiap call.</li>
+          <li><strong>AppException hierarchy</strong> — error dipetakan ke pesan yang aman ditampilkan ke user (<span class="code-ref">RemoteException</span>, <span class="code-ref">OfflineException</span>, dst).</li>
+          <li><strong>Cache-first repository</strong> — return cache lokal dulu, refresh di background; offline + cache kosong → exception terkontrol, bukan crash.</li>
+        </ul>
+      </div>
+      <div class="callout warn">
+        <h4>⚠️ Refinement SOLID yang masih tertunda</h4>
+        <ul class="compact">
+          <li><strong>SRP:</strong> <span class="code-ref">_composeTracks()</span> di <span class="code-ref">QuranRepositoryImpl</span> punya side effect tersembunyi (assign cache di dalam fungsi "komposisi").</li>
+          <li><strong>OCP:</strong> daftar <span class="code-ref">_featuredReciters</span> hardcoded; <span class="code-ref">_describeAudioError</span> pakai if-chain string matching.</li>
+          <li><strong>LSP:</strong> <span class="code-ref">JustAudioPlayerService.load()</span> diam-diam fallback ke sumber tanpa cache — kontrak interface jadi tidak konsisten.</li>
+          <li><strong>ISP:</strong> <span class="code-ref">IQuranRepository</span> (5 method, 2 tak terpakai oleh <span class="code-ref">SearchBloc</span>) dan <span class="code-ref">IAudioPlayerService</span> mencampur transport &amp; observable streams.</li>
+          <li><strong>DIP:</strong> <span class="code-ref">SleepTimerBloc</span> memakai <span class="code-ref">Timer</span> langsung (sulit di-test tanpa menunggu waktu nyata); <span class="code-ref">AyahBloc</span> bergantung langsung pada <span class="code-ref">WidgetsBinding</span>.</li>
+        </ul>
+      </div>
+    </div>
+
+    <table class="verdict-table" style="margin-top:18px;">
+      <tr><th>Prinsip SOLID</th><th>Skor</th><th>Ringkasan</th></tr>
+      <tr><td><strong>S</strong> — Single Responsibility</td><td><span class="score">7/10<span class="score-bar"><span style="width:70%;background:var(--gold)"></span></span></span></td><td>BLoC per fitur sudah fokus; <span class="code-ref">DownloadServiceImpl</span> menangani HTTP+IO+DB+stream sekaligus — kandidat dipecah jadi <span class="code-ref">AudioFileDownloader</span> + <span class="code-ref">DownloadRepository</span>.</td></tr>
+      <tr><td><strong>O</strong> — Open/Closed</td><td><span class="score">6/10<span class="score-bar"><span style="width:60%;background:var(--orange)"></span></span></span></td><td><span class="code-ref">AppException</span> sealed hierarchy mudah diperluas, tapi konfigurasi bisnis (featured reciters) & error mapping masih hardcoded di dalam class.</td></tr>
+      <tr><td><strong>L</strong> — Liskov Substitution</td><td><span class="score">8/10<span class="score-bar"><span style="width:80%;background:var(--green)"></span></span></span></td><td><span class="code-ref">NoOpCloudSyncService</span> adalah contoh implementasi stub yang benar — pertahankan pola ini saat membangun Cloud Sync nyata.</td></tr>
+      <tr><td><strong>I</strong> — Interface Segregation</td><td><span class="score">7/10<span class="score-bar"><span style="width:70%;background:var(--gold)"></span></span></span></td><td>Tiap layer sudah punya interface sendiri, tapi dua interface (<span class="code-ref">IQuranRepository</span>, <span class="code-ref">IAudioPlayerService</span>) terlalu gemuk untuk sebagian consumer-nya.</td></tr>
+      <tr><td><strong>D</strong> — Dependency Inversion</td><td><span class="score">7/10<span class="score-bar"><span style="width:70%;background:var(--gold)"></span></span></span></td><td>DI lewat <span class="code-ref">get_it</span> + interface konsisten di hampir semua tempat; dua pengecualian: <span class="code-ref">Timer</span> langsung &amp; akses <span class="code-ref">WidgetsBinding</span> dari BLoC.</td></tr>
+    </table>
+    <p style="font-size:.82rem;color:var(--text-2);margin-top:-4px;">📌 Skor &amp; rincian Before/After di atas konsisten dengan temuan pada <span class="code-ref">docs/Quran_App_Analysis_Report.html</span> — di sini diringkas dalam konteks kesehatan arsitektur secara keseluruhan.</p>
+  </div>
+
+  <!-- ===================== TESTING & CI ===================== -->
+  <div class="section">
+    <div class="section-title"><span class="icon">🧪</span> Testing &amp; Kesiapan CI/CD</div>
+    <p class="lead">Ini adalah <strong>kesenjangan terbesar</strong> antara kualitas desain arsitektur dan kesiapan operasional proyek.</p>
+
+    <div class="issue-card">
+      <div class="issue-header">
+        <span class="severity-dot sev-high"></span>
+        <div>
+          <div class="issue-title">Cakupan test sangat tipis — ~5% rasio kode test terhadap kode aplikasi</div>
+          <div class="issue-desc">Hanya <strong>6 file test</strong> (≈411 baris) menutupi <strong>≈8.400 baris</strong> kode lib. Yang ter-cover: <span class="code-ref">Result</span>, <span class="code-ref">DurationFormatter</span>, <span class="code-ref">SearchNormalizer</span>, satu BLoC (<span class="code-ref">PlayerBloc</span>), <span class="code-ref">Track</span> model, dan <span class="code-ref">QuranRepository</span>. Yang <strong>belum ter-cover sama sekali</strong>: <span class="code-ref">SearchBloc</span> (paginasi + debounce), <span class="code-ref">DownloadBloc</span>/<span class="code-ref">DownloadServiceImpl</span> (alur paling kompleks &amp; paling rawan bug menurut review), <span class="code-ref">SleepTimerBloc</span>, <span class="code-ref">BookmarkBloc</span>, <span class="code-ref">AyahBloc</span> — serta <strong>tidak ada satupun widget test atau golden test</strong> untuk layar (SearchScreen, PlayerPanel, AyahView, Settings).</div>
+        </div>
+      </div>
+      <div class="issue-body">
+        <span class="tag tag-test">Testing</span><span class="tag tag-high">High</span>
+        <div class="rec-block"><strong>Rekomendasi bertahap:</strong>
+          <br>1) Prioritaskan <span class="code-ref">bloc_test</span> untuk <span class="code-ref">SearchBloc</span>, <span class="code-ref">DownloadBloc</span>, dan <span class="code-ref">SleepTimerBloc</span> — tiga area dengan bug/perilaku tak terduga yang sudah teridentifikasi pada review terpisah.
+          <br>2) Tambahkan widget test untuk komponen kunci (<span class="code-ref">SurahTile</span>, <span class="code-ref">PlayerPanel</span>, <span class="code-ref">EmptyStateView</span>) memakai <span class="code-ref">mocktail</span>/fakes terhadap interface yang sudah ada.
+          <br>3) Pertimbangkan <span class="code-ref">golden_toolkit</span> untuk snapshot UI di breakpoint compact vs two-pane (regresi visual responsif jadi mudah terdeteksi).
+          <br>Effort total realistis: ~3–5 hari dikerjakan bertahap per fitur.
+        </div>
+      </div>
+    </div>
+
+    <div class="issue-card">
+      <div class="issue-header">
+        <span class="severity-dot sev-medium"></span>
+        <div>
+          <div class="issue-title">Tidak ada gerbang otomatis sebelum kode masuk ke <span class="code-ref">main</span></div>
+          <div class="issue-desc">Karena tidak ada CI, lint rules yang sudah dipromosikan jadi <span class="code-ref">error</span> di <span class="code-ref">analysis_options.yaml</span> (mis. <span class="code-ref">missing_required_param</span>, <span class="code-ref">dead_code</span>, <span class="code-ref">unused_import</span>) — dan ke-6 test yang ada — hanya tervalidasi jika developer menjalankannya secara manual sebelum commit/push. Ini membuat regresi berpotensi lolos terutama saat kontribusi datang dari banyak orang.</div>
+        </div>
+      </div>
+      <div class="issue-body">
+        <span class="tag tag-tech">CI/CD</span><span class="tag tag-medium">Medium</span>
+        <div class="rec-block"><strong>Rekomendasi:</strong> Workflow CI (lihat bagian Tech Stack di atas) sekaligus berfungsi sebagai <em>quality gate</em> — PR tidak bisa di-merge jika <span class="code-ref">flutter analyze</span> atau <span class="code-ref">flutter test</span> gagal. Bisa dikombinasikan dengan branch protection rule di GitHub.</div>
+      </div>
+    </div>
+
+    <div class="good-block">
+      <strong>✅ Fondasi yang sudah benar:</strong> <span class="code-ref">analysis_options.yaml</span> dikonfigurasi dengan sangat disiplin — <span class="code-ref">strict-casts</span>, <span class="code-ref">strict-inference</span>, <span class="code-ref">strict-raw-types</span>, dan promosi sejumlah lint warning jadi error. Test yang sudah ada juga ditulis rapi dan ditata sesuai struktur <span class="code-ref">lib/</span> (<span class="code-ref">test/core</span>, <span class="code-ref">test/features</span>, <span class="code-ref">test/data</span>). Tinggal diperluas cakupannya dan dijalankan otomatis.
+    </div>
+  </div>
+
+  <!-- ===================== SECURITY ===================== -->
+  <div class="section">
+    <div class="section-title"><span class="icon">🔒</span> Keamanan — Salah Satu Titik Terkuat</div>
+    <p class="lead">Berbeda dari banyak project tahap awal, hardening keamanan di sini sudah dilakukan di tiga lapis sekaligus dan layak dipertahankan sebagai standar:</p>
+    <div class="callout-grid">
+      <div class="callout"><h4>🌐 Jaringan</h4><p><span class="code-ref">AppConfig._assertHttpsOnly()</span> menolak start jika endpoint bukan HTTPS; diperkuat oleh <span class="code-ref">android:networkSecurityConfig</span> dan iOS App Transport Security.</p></div>
+      <div class="callout"><h4>📱 Android Manifest</h4><p><span class="code-ref">usesCleartextTraffic="false"</span> dan <span class="code-ref">allowBackup="false"</span> — mencegah traffic plaintext dan kebocoran data lewat backup otomatis.</p></div>
+      <div class="callout"><h4>🛡️ Build Hardening</h4><p>R8 minify &amp; ProGuard aktif untuk release build, mengurangi permukaan reverse-engineering.</p></div>
+    </div>
+  </div>
+
+  <!-- ===================== ROADMAP ===================== -->
+  <div class="section">
+    <div class="section-title"><span class="icon">🗺️</span> Roadmap Perbaikan — Gabungan Tech + Arsitektur</div>
+    <p class="lead">Daftar ini melengkapi (bukan menggantikan) tabel prioritas UI/UX &amp; fitur pada <span class="code-ref">docs/Quran_App_Analysis_Report.html</span> — fokus di sini murni pada sisi teknologi, arsitektur, dan kesiapan operasional.</p>
+    <table class="priority-table">
+      <tr><th>#</th><th>Item</th><th>Kategori</th><th>Prioritas</th><th>Estimasi</th></tr>
+      <tr><td>1</td><td>Setup pipeline CI: <span class="code-ref">flutter analyze</span> + <span class="code-ref">flutter test</span> pada setiap push/PR</td><td>CI/CD</td><td><span class="pill pill-p1">P1 — Critical</span></td><td>~2 jam</td></tr>
+      <tr><td>2</td><td>Kunci versi <span class="code-ref">just_audio_background</span> (exact pin) &amp; pantau rilis stabil; tambah catatan risiko di README</td><td>Tech / Dependency</td><td><span class="pill pill-p1">P1 — Critical</span></td><td>~30 menit</td></tr>
+      <tr><td>3</td><td>Ganti <span class="code-ref">intl: any</span> menjadi constraint eksplisit yang kompatibel dengan <span class="code-ref">flutter_localizations</span></td><td>Tech / Dependency</td><td><span class="pill pill-p1">P1 — Critical</span></td><td>~30 menit</td></tr>
+      <tr><td>4</td><td>Tulis <span class="code-ref">bloc_test</span> untuk <span class="code-ref">SearchBloc</span>, <span class="code-ref">DownloadBloc</span>, <span class="code-ref">SleepTimerBloc</span></td><td>Testing</td><td><span class="pill pill-p2">P2 — High</span></td><td>~2–3 hari</td></tr>
+      <tr><td>5</td><td>Ekstrak <span class="code-ref">_composeTracks</span> side effect → value object murni <span class="code-ref">_ComposedData</span></td><td>Refactor [S]</td><td><span class="pill pill-p2">P2 — High</span></td><td>~2 jam</td></tr>
+      <tr><td>6</td><td>Ekstrak <span class="code-ref">AudioErrorMapper</span> dari <span class="code-ref">PlayerBloc</span> (Chain of Responsibility, hilangkan if-chain string match)</td><td>Refactor [O+S]</td><td><span class="pill pill-p2">P2 — High</span></td><td>~3 jam</td></tr>
+      <tr><td>7</td><td>Inject <span class="code-ref">ITickerService</span> ke <span class="code-ref">SleepTimerBloc</span> — hilangkan <span class="code-ref">Timer</span> konkret agar bisa di-unit-test tanpa menunggu waktu nyata</td><td>Refactor [D]</td><td><span class="pill pill-p2">P2 — High</span></td><td>~2 jam</td></tr>
+      <tr><td>8</td><td>Tambah widget test &amp; (opsional) golden test untuk layar utama (Search, Player, Ayah, Settings)</td><td>Testing</td><td><span class="pill pill-p3">P3 — Medium</span></td><td>~2 hari</td></tr>
+      <tr><td>9</td><td>Pecah <span class="code-ref">IQuranRepository</span> → <span class="code-ref">ISurahRepository</span> + <span class="code-ref">IEditionRepository</span></td><td>Refactor [I]</td><td><span class="pill pill-p3">P3 — Medium</span></td><td>~2 jam</td></tr>
+      <tr><td>10</td><td>Pecah <span class="code-ref">IAudioPlayerService</span> → <span class="code-ref">IAudioTransport</span> + <span class="code-ref">IAudioObserver</span></td><td>Refactor [I]</td><td><span class="pill pill-p3">P3 — Medium</span></td><td>~2 jam</td></tr>
+      <tr><td>11</td><td>Jadikan <span class="code-ref">JustAudioPlayerService.load()</span> fallback eksplisit lewat <span class="code-ref">isCached</span> getter (hilangkan silent catch)</td><td>Refactor [L]</td><td><span class="pill pill-p3">P3 — Medium</span></td><td>~1 jam</td></tr>
+      <tr><td>12</td><td>Inject <span class="code-ref">AppConfig.featuredReciterIds</span> &amp; <span class="code-ref">IMemoryCache&lt;T&gt;</span> ke <span class="code-ref">QuranRepositoryImpl</span> (hilangkan hardcoded set &amp; field cache manual)</td><td>Refactor [O+D]</td><td><span class="pill pill-p4">P4 — Low</span></td><td>~4 jam</td></tr>
+      <tr><td>13</td><td>Perluas lokalisasi (tambah <span class="code-ref">ar</span>, <span class="code-ref">ur</span>, dll.) &amp; uji layout RTL</td><td>Tech / i18n</td><td><span class="pill pill-p4">P4 — Low</span></td><td>~2 hari</td></tr>
+      <tr><td>14</td><td>Buat <span class="code-ref">DbMigration</span> registry untuk menggantikan if-chain di <span class="code-ref">DatabaseService._onUpgrade</span> (memudahkan migrasi v3 yang direkomendasikan pada laporan fitur)</td><td>Refactor [OOP]</td><td><span class="pill pill-p4">P4 — Low</span></td><td>~2 jam</td></tr>
+    </table>
+  </div>
+
+</div>
+
+<footer>
+  Quran Player — Analisa Keseluruhan, Teknologi &amp; Arsitektur • Dihasilkan Juni 2026 • Flutter (Dart SDK ^3.11.5) • Pelengkap dari <span class="code-ref">docs/Quran_App_Analysis_Report.html</span> (fokus UX &amp; fitur)
+</footer>
+
+</body>
+</html>

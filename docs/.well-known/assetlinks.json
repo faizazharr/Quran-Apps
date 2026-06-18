@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.labs.quran",
+      "sha256_cert_fingerprints": [
+        "90:9C:DB:C4:9A:F4:AA:B5:64:79:AE:94:79:36:6A:D3:C7:E2:CC:97:BD:4A:70:8B:5B:77:02:13:BF:D3:2C:72"
+      ]
+    }
+  }
+]

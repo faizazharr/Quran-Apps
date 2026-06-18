@@ -250,7 +250,10 @@ class AyahBloc extends Bloc<AyahEvent, AyahState> {
       // If the target ayah is beyond what the lazy list has rendered, expand
       // visibleCount so _scrollToActive can find the item's GlobalKey context.
       final newVisible = index >= state.visibleCount
-          ? ((index ~/ _kPageSize + 1) * _kPageSize).clamp(0, state.ayahs.length)
+          ? ((index ~/ _kPageSize + 1) * _kPageSize).clamp(
+              0,
+              state.ayahs.length,
+            )
           : state.visibleCount;
       emit(state.copyWith(activeIndex: index, visibleCount: newVisible));
     }

@@ -116,140 +116,143 @@ class BookmarksScreen extends StatelessWidget {
                       maxWidth: Breakpoints.contentMaxWidth,
                     ),
                     child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  itemCount: state.bookmarks.length,
-                  itemBuilder: (context, i) {
-                    final b = state.bookmarks[i];
-                    final searchState = context.read<SearchBloc>().state;
-                    final surahName =
-                        searchState.surahs
-                            .where((s) => s.number == b.surahNumber)
-                            .map((s) => s.englishName)
-                            .firstOrNull ??
-                        'Surah ${b.surahNumber}';
-                    final reciterName =
-                        searchState.reciters
-                            .where((e) => e.identifier == b.editionId)
-                            .map((e) => e.englishName)
-                            .firstOrNull ??
-                        b.editionId;
-                    final position = DurationFormatter.format(
-                      Duration(milliseconds: b.positionMs),
-                    );
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      itemCount: state.bookmarks.length,
+                      itemBuilder: (context, i) {
+                        final b = state.bookmarks[i];
+                        final searchState = context.read<SearchBloc>().state;
+                        final surahName =
+                            searchState.surahs
+                                .where((s) => s.number == b.surahNumber)
+                                .map((s) => s.englishName)
+                                .firstOrNull ??
+                            'Surah ${b.surahNumber}';
+                        final reciterName =
+                            searchState.reciters
+                                .where((e) => e.identifier == b.editionId)
+                                .map((e) => e.englishName)
+                                .firstOrNull ??
+                            b.editionId;
+                        final position = DurationFormatter.format(
+                          Duration(milliseconds: b.positionMs),
+                        );
 
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 5,
-                      ),
-                      child: Card(
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(20),
-                          onTap: () => _onTap(
-                            context,
-                            b.surahNumber,
-                            b.editionId,
-                            b.positionMs,
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 5,
                           ),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 12,
-                            ),
-                            child: Row(
-                              children: [
-                                // Surah number badge
-                                Container(
-                                  width: 48,
-                                  height: 48,
-                                  decoration: BoxDecoration(
-                                    gradient: AppColors.brandGradient,
-                                    borderRadius: BorderRadius.circular(14),
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: Text(
-                                    '${b.surahNumber}',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w800,
-                                      fontSize: 16,
-                                    ),
-                                  ),
+                          child: Card(
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(20),
+                              onTap: () => _onTap(
+                                context,
+                                b.surahNumber,
+                                b.editionId,
+                                b.positionMs,
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 12,
                                 ),
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        surahName,
+                                child: Row(
+                                  children: [
+                                    // Surah number badge
+                                    Container(
+                                      width: 48,
+                                      height: 48,
+                                      decoration: BoxDecoration(
+                                        gradient: AppColors.brandGradient,
+                                        borderRadius: BorderRadius.circular(14),
+                                      ),
+                                      alignment: Alignment.center,
+                                      child: Text(
+                                        '${b.surahNumber}',
                                         style: const TextStyle(
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 15,
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w800,
+                                          fontSize: 16,
                                         ),
                                       ),
-                                      const SizedBox(height: 3),
-                                      Text(
-                                        '$reciterName · $position',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: scheme.onSurfaceVariant,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                IconButton(
-                                  icon: Icon(
-                                    Icons.delete_outline,
-                                    color: scheme.onSurfaceVariant,
-                                    size: 20,
-                                  ),
-                                  tooltip: 'Delete',
-                                  onPressed: () async {
-                                    final confirm = await showDialog<bool>(
-                                      context: context,
-                                      builder: (dialogCtx) => AlertDialog(
-                                        title: const Text('Delete bookmark?'),
-                                        content: const Text(
-                                          'This bookmark will be permanently removed.',
-                                        ),
-                                        actions: [
-                                          TextButton(
-                                            onPressed: () => Navigator.of(
-                                              dialogCtx,
-                                            ).pop(false),
-                                            child: const Text('Cancel'),
+                                    ),
+                                    const SizedBox(width: 14),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            surahName,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 15,
+                                            ),
                                           ),
-                                          FilledButton(
-                                            onPressed: () => Navigator.of(
-                                              dialogCtx,
-                                            ).pop(true),
-                                            child: const Text('Delete'),
+                                          const SizedBox(height: 3),
+                                          Text(
+                                            '$reciterName · $position',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: scheme.onSurfaceVariant,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
                                           ),
                                         ],
                                       ),
-                                    );
-                                    if (confirm == true && context.mounted) {
-                                      context.read<BookmarkBloc>().add(
-                                        BookmarkDeleteRequested(b.id!),
-                                      );
-                                    }
-                                  },
+                                    ),
+                                    IconButton(
+                                      icon: Icon(
+                                        Icons.delete_outline,
+                                        color: scheme.onSurfaceVariant,
+                                        size: 20,
+                                      ),
+                                      tooltip: 'Delete',
+                                      onPressed: () async {
+                                        final confirm = await showDialog<bool>(
+                                          context: context,
+                                          builder: (dialogCtx) => AlertDialog(
+                                            title: const Text(
+                                              'Delete bookmark?',
+                                            ),
+                                            content: const Text(
+                                              'This bookmark will be permanently removed.',
+                                            ),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () => Navigator.of(
+                                                  dialogCtx,
+                                                ).pop(false),
+                                                child: const Text('Cancel'),
+                                              ),
+                                              FilledButton(
+                                                onPressed: () => Navigator.of(
+                                                  dialogCtx,
+                                                ).pop(true),
+                                                child: const Text('Delete'),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                        if (confirm == true &&
+                                            context.mounted) {
+                                          context.read<BookmarkBloc>().add(
+                                            BookmarkDeleteRequested(b.id!),
+                                          );
+                                        }
+                                      },
+                                    ),
+                                  ],
                                 ),
-                              ],
+                              ),
                             ),
                           ),
-                        ),
-                      ),
-                    );
-                  },
-                ),   // ListView.builder
+                        );
+                      },
+                    ), // ListView.builder
                   ), // ConstrainedBox
-                );   // Center — ends the return statement
+                ); // Center — ends the return statement
               },
             ),
           ),

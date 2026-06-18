@@ -54,188 +54,193 @@ class _FullContent extends StatelessWidget {
           curr.repeatMode == PlayerRepeatMode.all,
       listener: (context, _) => _skipToAdjacent(context, 1),
       child: DecoratedBox(
-      decoration: const BoxDecoration(gradient: AppColors.brandGradient),
-      child: BlocSelector<PlayerBloc, PlayerState, Track?>(
-        selector: (s) => s.track,
-        builder: (context, track) {
-          if (track == null) return const SizedBox.shrink();
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // ── Artwork / now-playing info ──────────────────────────────
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 480),
-                      child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      // Large surah number badge
-                      Container(
-                        width: 110,
-                        height: 110,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.18),
-                          borderRadius: BorderRadius.circular(28),
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.22),
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.18),
-                              blurRadius: 24,
-                              offset: const Offset(0, 8),
+        decoration: const BoxDecoration(gradient: AppColors.brandGradient),
+        child: BlocSelector<PlayerBloc, PlayerState, Track?>(
+          selector: (s) => s.track,
+          builder: (context, track) {
+            if (track == null) return const SizedBox.shrink();
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // ── Artwork / now-playing info ──────────────────────────────
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 480),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            // Large surah number badge
+                            Container(
+                              width: 110,
+                              height: 110,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.18),
+                                borderRadius: BorderRadius.circular(28),
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.22),
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.18),
+                                    blurRadius: 24,
+                                    offset: const Offset(0, 8),
+                                  ),
+                                ],
+                              ),
+                              alignment: Alignment.center,
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Padding(
+                                  padding: const EdgeInsets.all(10),
+                                  child: Text(
+                                    '${track.surah.number}',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 44,
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ),
-                          ],
-                        ),
-                        alignment: Alignment.center,
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Padding(
-                            padding: const EdgeInsets.all(10),
-                            child: Text(
-                              '${track.surah.number}',
+                            const SizedBox(height: 22),
+                            Text(
+                              track.surah.englishName,
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w800,
-                                fontSize: 44,
+                                fontSize: 22,
+                                letterSpacing: -0.3,
+                              ),
+                              textAlign: TextAlign.center,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 5),
+                            Text(
+                              track.surah.name,
+                              textDirection: TextDirection.rtl,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontFamily: 'Scheherazade New',
+                                fontSize: 26,
+                                color: Colors.white.withValues(alpha: 0.88),
                               ),
                             ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 22),
-                      Text(
-                        track.surah.englishName,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 22,
-                          letterSpacing: -0.3,
-                        ),
-                        textAlign: TextAlign.center,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 5),
-                      Text(
-                        track.surah.name,
-                        textDirection: TextDirection.rtl,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontFamily: 'Scheherazade New',
-                          fontSize: 26,
-                          color: Colors.white.withValues(alpha: 0.88),
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        track.artist,
-                        textAlign: TextAlign.center,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.white.withValues(alpha: 0.68),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      // Action buttons
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          _CircleBtn(
-                            icon: Icons.bookmark_add_outlined,
-                            tooltip: 'Bookmark',
-                            onTap: () {
-                              context.read<BookmarkBloc>().add(
-                                BookmarkAddRequested(
-                                  surahNumber: track.surah.number,
-                                  editionId: track.edition.identifier,
-                                  positionMs: context
-                                      .read<PlayerBloc>()
-                                      .state
-                                      .position
-                                      .inMilliseconds,
+                            const SizedBox(height: 6),
+                            Text(
+                              track.artist,
+                              textAlign: TextAlign.center,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.white.withValues(alpha: 0.68),
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            // Action buttons
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                _CircleBtn(
+                                  icon: Icons.bookmark_add_outlined,
+                                  tooltip: 'Bookmark',
+                                  onTap: () {
+                                    context.read<BookmarkBloc>().add(
+                                      BookmarkAddRequested(
+                                        surahNumber: track.surah.number,
+                                        editionId: track.edition.identifier,
+                                        positionMs: context
+                                            .read<PlayerBloc>()
+                                            .state
+                                            .position
+                                            .inMilliseconds,
+                                      ),
+                                    );
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Bookmarked'),
+                                        duration: Duration(seconds: 2),
+                                      ),
+                                    );
+                                  },
                                 ),
-                              );
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Bookmarked'),
-                                  duration: Duration(seconds: 2),
-                                ),
-                              );
-                            },
-                          ),
-                          const SizedBox(width: 14),
-                          BlocSelector<SleepTimerBloc, SleepTimerState, bool>(
-                            selector: (s) => s.isActive,
-                            builder: (context, isActive) => _CircleBtn(
-                              icon: isActive
-                                  ? Icons.bedtime_rounded
-                                  : Icons.bedtime_outlined,
-                              tooltip: isActive
-                                  ? 'Sleep timer active'
-                                  : 'Sleep timer',
-                              active: isActive,
-                              onTap: () => showDialog<void>(
-                                context: context,
-                                builder: (_) => MultiBlocProvider(
-                                  providers: [
-                                    BlocProvider.value(
-                                      value: context.read<SleepTimerBloc>(),
+                                const SizedBox(width: 14),
+                                BlocSelector<
+                                  SleepTimerBloc,
+                                  SleepTimerState,
+                                  bool
+                                >(
+                                  selector: (s) => s.isActive,
+                                  builder: (context, isActive) => _CircleBtn(
+                                    icon: isActive
+                                        ? Icons.bedtime_rounded
+                                        : Icons.bedtime_outlined,
+                                    tooltip: isActive
+                                        ? 'Sleep timer active'
+                                        : 'Sleep timer',
+                                    active: isActive,
+                                    onTap: () => showDialog<void>(
+                                      context: context,
+                                      builder: (_) => MultiBlocProvider(
+                                        providers: [
+                                          BlocProvider.value(
+                                            value: context
+                                                .read<SleepTimerBloc>(),
+                                          ),
+                                        ],
+                                        child: const SleepTimerDialog(),
+                                      ),
                                     ),
-                                  ],
-                                  child: const SleepTimerDialog(),
+                                  ),
                                 ),
-                              ),
+                                const SizedBox(width: 14),
+                                _CircleBtn(
+                                  icon: Icons.close_rounded,
+                                  tooltip: 'Stop',
+                                  onTap: () => context.read<PlayerBloc>().add(
+                                    const PlayerStopRequested(),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                          const SizedBox(width: 14),
-                          _CircleBtn(
-                            icon: Icons.close_rounded,
-                            tooltip: 'Stop',
-                            onTap: () => context.read<PlayerBloc>().add(
-                              const PlayerStopRequested(),
-                            ),
-                          ),
-                        ],
+                          ],
+                        ), // Column
+                      ), // ConstrainedBox
+                    ), // Center
+                  ), // SingleChildScrollView
+                ), // Expanded
+                // ── Controls ────────────────────────────────────────────────
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    border: Border(
+                      top: BorderSide(
+                        color: Colors.white.withValues(alpha: 0.15),
                       ),
-                    ],
-                  ),     // Column
-                ),       // ConstrainedBox
-                ),       // Center
-                ),       // SingleChildScrollView
-              ),         // Expanded
-              // ── Controls ────────────────────────────────────────────────
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  border: Border(
-                    top: BorderSide(
-                      color: Colors.white.withValues(alpha: 0.15),
+                    ),
+                  ),
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(18, 14, 18, 14 + bottomPad),
+                    child: const Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        RepaintBoundary(child: PlayerSeekBar()),
+                        SizedBox(height: 8),
+                        _Controls(speeds: _speeds),
+                      ],
                     ),
                   ),
                 ),
-                child: Padding(
-                  padding: EdgeInsets.fromLTRB(18, 14, 18, 14 + bottomPad),
-                  child: const Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      RepaintBoundary(child: PlayerSeekBar()),
-                      SizedBox(height: 8),
-                      _Controls(speeds: _speeds),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          );
-        },
-      ),
-    ),   // DecoratedBox
-    );   // BlocListener
+              ],
+            );
+          },
+        ),
+      ), // DecoratedBox
+    ); // BlocListener
   }
 }
 
@@ -356,8 +361,13 @@ class _VM extends Equatable {
     required this.repeatMode,
   });
   @override
-  List<Object?> get props =>
-      [isPlaying, isLoading, isCompleted, speed, repeatMode];
+  List<Object?> get props => [
+    isPlaying,
+    isLoading,
+    isCompleted,
+    speed,
+    repeatMode,
+  ];
 }
 
 // ─── Button primitives ────────────────────────────────────────────────────────

@@ -303,48 +303,29 @@ class _AyahTile extends StatelessWidget {
   });
 
   void _showCopyMenu(BuildContext outerCtx) {
-    showModalBottomSheet<void>(
-      context: outerCtx,
-      builder: (sheetCtx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.symmetric(vertical: 10),
-                decoration: BoxDecoration(
-                  color: scheme.onSurfaceVariant.withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(2),
+    unawaited(
+      showModalBottomSheet<void>(
+        context: outerCtx,
+        builder: (sheetCtx) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.symmetric(vertical: 10),
+                  decoration: BoxDecoration(
+                    color: scheme.onSurfaceVariant.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
               ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.copy_rounded),
-              title: const Text('Copy Arabic text'),
-              onTap: () {
-                Clipboard.setData(ClipboardData(text: ayah.text));
-                Navigator.pop(sheetCtx);
-                ScaffoldMessenger.of(outerCtx).showSnackBar(
-                  const SnackBar(
-                    content: Text('Copied to clipboard'),
-                    duration: Duration(seconds: 2),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-              },
-            ),
-            if (translation != null)
               ListTile(
-                leading: const Icon(Icons.translate_rounded),
-                title: const Text('Copy with translation'),
+                leading: const Icon(Icons.copy_rounded),
+                title: const Text('Copy Arabic text'),
                 onTap: () {
-                  Clipboard.setData(
-                    ClipboardData(
-                      text: '${ayah.text}\n\n$translation',
-                    ),
-                  );
+                  unawaited(Clipboard.setData(ClipboardData(text: ayah.text)));
                   Navigator.pop(sheetCtx);
                   ScaffoldMessenger.of(outerCtx).showSnackBar(
                     const SnackBar(
@@ -355,7 +336,28 @@ class _AyahTile extends StatelessWidget {
                   );
                 },
               ),
-          ],
+              if (translation != null)
+                ListTile(
+                  leading: const Icon(Icons.translate_rounded),
+                  title: const Text('Copy with translation'),
+                  onTap: () {
+                    unawaited(
+                      Clipboard.setData(
+                        ClipboardData(text: '${ayah.text}\n\n$translation'),
+                      ),
+                    );
+                    Navigator.pop(sheetCtx);
+                    ScaffoldMessenger.of(outerCtx).showSnackBar(
+                      const SnackBar(
+                        content: Text('Copied to clipboard'),
+                        duration: Duration(seconds: 2),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  },
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -366,70 +368,77 @@ class _AyahTile extends StatelessWidget {
     return GestureDetector(
       onLongPress: () => _showCopyMenu(context),
       child: AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-      decoration: BoxDecoration(
-        color: isActive
-            ? scheme.primaryContainer.withValues(alpha: 0.4)
-            : Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Ayah number badge
-          Align(
-            alignment: Alignment.centerRight,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-              decoration: BoxDecoration(
-                color: isActive ? scheme.primary : scheme.surfaceContainerHigh,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                '﴿${ayah.numberInSurah}﴾',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: isActive ? scheme.onPrimary : scheme.onSurfaceVariant,
-                  fontFamily: 'Scheherazade New',
+        duration: const Duration(milliseconds: 300),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+        decoration: BoxDecoration(
+          color: isActive
+              ? scheme.primaryContainer.withValues(alpha: 0.4)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Ayah number badge
+            Align(
+              alignment: Alignment.centerRight,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 2,
+                ),
+                decoration: BoxDecoration(
+                  color: isActive
+                      ? scheme.primary
+                      : scheme.surfaceContainerHigh,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  '﴿${ayah.numberInSurah}﴾',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: isActive
+                        ? scheme.onPrimary
+                        : scheme.onSurfaceVariant,
+                    fontFamily: 'Scheherazade New',
+                  ),
                 ),
               ),
             ),
-          ),
-          const SizedBox(height: 8),
-
-          // Arabic text (right-to-left)
-          Directionality(
-            textDirection: TextDirection.rtl,
-            child: Text(
-              ayah.text,
-              style: TextStyle(
-                fontFamily: 'Scheherazade New',
-                fontSize: 26,
-                height: 1.9,
-                color: isActive ? scheme.primary : scheme.onSurface,
-                fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
-              ),
-              textAlign: TextAlign.justify,
-            ),
-          ),
-
-          // Optional translation
-          if (translation != null) ...[
             const SizedBox(height: 8),
-            Text(
-              translation!,
-              style: TextStyle(
-                fontSize: 14,
-                color: scheme.onSurfaceVariant,
-                height: 1.5,
+
+            // Arabic text (right-to-left)
+            Directionality(
+              textDirection: TextDirection.rtl,
+              child: Text(
+                ayah.text,
+                style: TextStyle(
+                  fontFamily: 'Scheherazade New',
+                  fontSize: 26,
+                  height: 1.9,
+                  color: isActive ? scheme.primary : scheme.onSurface,
+                  fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+                ),
+                textAlign: TextAlign.justify,
               ),
             ),
+
+            // Optional translation
+            if (translation != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                translation!,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: scheme.onSurfaceVariant,
+                  height: 1.5,
+                ),
+              ),
+            ],
           ],
-        ],
-      ),
-    ),    // AnimatedContainer
-    );    // GestureDetector
+        ),
+      ), // AnimatedContainer
+    ); // GestureDetector
   }
 }
 

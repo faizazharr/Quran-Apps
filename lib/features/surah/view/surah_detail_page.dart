@@ -278,9 +278,7 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // ── Left: scrollable ayah list ──────────────────────────────────
-          Expanded(
-            child: _ayahPaneWithListener(playerInRightPane: true),
-          ),
+          Expanded(child: _ayahPaneWithListener(playerInRightPane: true)),
           // ── Separator ───────────────────────────────────────────────────
           Container(
             width: 1,
@@ -292,7 +290,9 @@ class _SurahDetailPageState extends State<SurahDetailPage> {
           SizedBox(
             width: rightWidth,
             child: DecoratedBox(
-              decoration: const BoxDecoration(gradient: AppColors.brandGradient),
+              decoration: const BoxDecoration(
+                gradient: AppColors.brandGradient,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -351,10 +351,12 @@ class _GradientHero extends StatelessWidget {
   final Surah surah;
   final VoidCallback onPickReciter;
   final VoidCallback onPlayTap;
+
   /// When false the gradient Container is omitted — the parent provides the
   /// background (used in the tablet right-panel layout where the entire column
   /// is already a single gradient container).
   final bool showBackground;
+
   /// Round the bottom corners — only meaningful when [showBackground] is true.
   /// Set false when the hero is part of a larger panel (tablet layout).
   final bool roundedBottom;
@@ -373,135 +375,133 @@ class _GradientHero extends StatelessWidget {
     final pad = EdgeInsets.fromLTRB(20, topPad + 8, 20, 22);
 
     final column = Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ── Row 1: back button ↔ Arabic name ─────────────────────────────
-          // The Arabic name lives here so the identity block below has full
-          // width for the (dominant) English title — no more cramped inline.
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              _CircleBackButton(),
-              const Spacer(),
-              Directionality(
-                textDirection: TextDirection.rtl,
-                child: Text(
-                  surah.name,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontFamily: 'Scheherazade New',
-                    fontSize: 22,
-                    height: 1.4,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // ── Row 1: back button ↔ Arabic name ─────────────────────────────
+        // The Arabic name lives here so the identity block below has full
+        // width for the (dominant) English title — no more cramped inline.
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            _CircleBackButton(),
+            const Spacer(),
+            Directionality(
+              textDirection: TextDirection.rtl,
+              child: Text(
+                surah.name,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontFamily: 'Scheherazade New',
+                  fontSize: 22,
+                  height: 1.4,
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          // ── Row 2: number badge + English title / meta ────────────────────
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              // Number badge — FittedBox handles 3-digit numbers (100–114).
-              Container(
-                width: 54,
-                height: 54,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.22),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.18),
-                  ),
-                ),
-                alignment: Alignment.center,
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Padding(
-                    padding: const EdgeInsets.all(6),
-                    child: Text(
-                      '${surah.number}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 22,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      surah.englishName,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 22,
-                        height: 1.1,
-                        letterSpacing: -0.3,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      surah.englishNameTranslation,
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.78),
-                        fontSize: 13,
-                        height: 1.3,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 4,
-                      children: [
-                        _MetaBadge('${surah.numberOfAyahs} Ayahs'),
-                        _MetaBadge(surah.revelationType),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-
-          // ── Row 3: reciter chip + download + play ────────────────────────
-          Row(
-            children: [
-              Expanded(child: _ReciterChip(onTap: onPickReciter)),
-              const SizedBox(width: 8),
-              _DownloadButton(surah: surah),
-              const SizedBox(width: 8),
-              _PlayButton(surahNumber: surah.number, onTap: onPlayTap),
-            ],
-          ),
-        ],
-      );  // end column
-
-      if (!showBackground) return Padding(padding: pad, child: column);
-
-      return Container(
-        width: double.infinity,
-        decoration: BoxDecoration(
-          gradient: AppColors.brandGradient,
-          borderRadius: roundedBottom
-              ? const BorderRadius.vertical(bottom: Radius.circular(28))
-              : null,
+            ),
+          ],
         ),
-        padding: pad,
-        child: column,
-      );
+        const SizedBox(height: 16),
+
+        // ── Row 2: number badge + English title / meta ────────────────────
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // Number badge — FittedBox handles 3-digit numbers (100–114).
+            Container(
+              width: 54,
+              height: 54,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.22),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+              ),
+              alignment: Alignment.center,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Padding(
+                  padding: const EdgeInsets.all(6),
+                  child: Text(
+                    '${surah.number}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 22,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    surah.englishName,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 22,
+                      height: 1.1,
+                      letterSpacing: -0.3,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    surah.englishNameTranslation,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.78),
+                      fontSize: 13,
+                      height: 1.3,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    children: [
+                      _MetaBadge('${surah.numberOfAyahs} Ayahs'),
+                      _MetaBadge(surah.revelationType),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+
+        // ── Row 3: reciter chip + download + play ────────────────────────
+        Row(
+          children: [
+            Expanded(child: _ReciterChip(onTap: onPickReciter)),
+            const SizedBox(width: 8),
+            _DownloadButton(surah: surah),
+            const SizedBox(width: 8),
+            _PlayButton(surahNumber: surah.number, onTap: onPlayTap),
+          ],
+        ),
+      ],
+    ); // end column
+
+    if (!showBackground) return Padding(padding: pad, child: column);
+
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: AppColors.brandGradient,
+        borderRadius: roundedBottom
+            ? const BorderRadius.vertical(bottom: Radius.circular(28))
+            : null,
+      ),
+      padding: pad,
+      child: column,
+    );
   }
 }
 
@@ -1163,6 +1163,7 @@ class _AyahPane extends StatefulWidget {
   final int surahNumber;
   final Surah surah;
   final bool isSheetHidden;
+
   /// True when the player is in the right-side column (tablet) — suppresses
   /// the extra bottom padding that reserves space for the bottom sheet.
   final bool playerInRightPane;
@@ -1385,16 +1386,17 @@ class _AyahPaneState extends State<_AyahPane> {
                       // Scrollable.ensureVisible on the rendered item.
                       return KeyedSubtree(
                         key: _keyFor(i),
-                        child: BlocSelector<SettingsBloc, SettingsState, double>(
-                          selector: (s) => s.settings.arabicFontSize,
-                          builder: (context, arabicFontSize) => _AyahCard(
-                            ayah: ayah,
-                            translation: translation,
-                            isActive: i == state.activeIndex,
-                            scheme: scheme,
-                            arabicFontSize: arabicFontSize,
-                          ),
-                        ),
+                        child:
+                            BlocSelector<SettingsBloc, SettingsState, double>(
+                              selector: (s) => s.settings.arabicFontSize,
+                              builder: (context, arabicFontSize) => _AyahCard(
+                                ayah: ayah,
+                                translation: translation,
+                                isActive: i == state.activeIndex,
+                                scheme: scheme,
+                                arabicFontSize: arabicFontSize,
+                              ),
+                            ),
                       );
                     },
                   ),
@@ -1402,25 +1404,25 @@ class _AyahPaneState extends State<_AyahPane> {
               ],
             );
 
-          // On expanded (tablet/desktop) screens, centre the list column and cap
-          // its width so reading lines stay comfortable (Breakpoints.contentMaxWidth).
-          if (useMaxWidth) {
-            content = Align(
-              alignment: Alignment.topCenter,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(
-                  maxWidth: Breakpoints.contentMaxWidth,
+            // On expanded (tablet/desktop) screens, centre the list column and cap
+            // its width so reading lines stay comfortable (Breakpoints.contentMaxWidth).
+            if (useMaxWidth) {
+              content = Align(
+                alignment: Alignment.topCenter,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    maxWidth: Breakpoints.contentMaxWidth,
+                  ),
+                  child: content,
                 ),
-                child: content,
-              ),
-            );
-          }
+              );
+            }
 
             return content;
           },
-        ),  // BlocBuilder<AyahBloc>
-      ),    // BlocSelector<PlayerBloc>
-    );      // BlocListener<AyahBloc>
+        ), // BlocBuilder<AyahBloc>
+      ), // BlocSelector<PlayerBloc>
+    ); // BlocListener<AyahBloc>
   }
 }
 
@@ -1480,8 +1482,7 @@ class _TabletActionRow extends StatelessWidget {
                   icon: timerActive
                       ? Icons.bedtime_rounded
                       : Icons.bedtime_outlined,
-                  tooltip:
-                      timerActive ? 'Sleep timer active' : 'Sleep timer',
+                  tooltip: timerActive ? 'Sleep timer active' : 'Sleep timer',
                   active: timerActive,
                   onTap: () => showDialog<void>(
                     context: context,
@@ -1603,9 +1604,7 @@ class _DownloadButton extends StatelessWidget {
                         );
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text(
-                              'Downloading ${surah.englishName}…',
-                            ),
+                            content: Text('Downloading ${surah.englishName}…'),
                             duration: const Duration(seconds: 2),
                           ),
                         );
@@ -1616,9 +1615,7 @@ class _DownloadButton extends StatelessWidget {
                         isCompleted
                             ? Icons.file_download_done_rounded
                             : Icons.download_rounded,
-                        color: isCompleted
-                            ? AppColors.accent
-                            : Colors.white,
+                        color: isCompleted ? AppColors.accent : Colors.white,
                         size: 22,
                       ),
                     ),
@@ -1690,10 +1687,7 @@ class _TabletPlayerCard extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             // Subtle separator — lighter than the gradient to add visual depth.
-            Container(
-              height: 1,
-              color: Colors.white.withValues(alpha: 0.15),
-            ),
+            Container(height: 1, color: Colors.white.withValues(alpha: 0.15)),
             Padding(
               padding: EdgeInsets.fromLTRB(16, 12, 16, 14 + bottomPad),
               child: const Column(
@@ -1834,47 +1828,31 @@ class _AyahCard extends StatelessWidget {
   });
 
   void _showCopyMenu(BuildContext outerCtx) {
-    showModalBottomSheet<void>(
-      context: outerCtx,
-      builder: (sheetCtx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Theme.of(sheetCtx).colorScheme.onSurfaceVariant
-                      .withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(2),
+    unawaited(
+      showModalBottomSheet<void>(
+        context: outerCtx,
+        builder: (sheetCtx) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Theme.of(
+                      sheetCtx,
+                    ).colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
               ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.copy_rounded),
-              title: const Text('Copy Arabic text'),
-              onTap: () {
-                Clipboard.setData(ClipboardData(text: ayah.text));
-                Navigator.pop(sheetCtx);
-                ScaffoldMessenger.of(outerCtx).showSnackBar(
-                  const SnackBar(
-                    content: Text('Copied to clipboard'),
-                    duration: Duration(seconds: 2),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-              },
-            ),
-            if (translation != null)
               ListTile(
-                leading: const Icon(Icons.translate_rounded),
-                title: const Text('Copy with translation'),
+                leading: const Icon(Icons.copy_rounded),
+                title: const Text('Copy Arabic text'),
                 onTap: () {
-                  Clipboard.setData(
-                    ClipboardData(text: '${ayah.text}\n\n$translation'),
-                  );
+                  unawaited(Clipboard.setData(ClipboardData(text: ayah.text)));
                   Navigator.pop(sheetCtx);
                   ScaffoldMessenger.of(outerCtx).showSnackBar(
                     const SnackBar(
@@ -1885,7 +1863,28 @@ class _AyahCard extends StatelessWidget {
                   );
                 },
               ),
-          ],
+              if (translation != null)
+                ListTile(
+                  leading: const Icon(Icons.translate_rounded),
+                  title: const Text('Copy with translation'),
+                  onTap: () {
+                    unawaited(
+                      Clipboard.setData(
+                        ClipboardData(text: '${ayah.text}\n\n$translation'),
+                      ),
+                    );
+                    Navigator.pop(sheetCtx);
+                    ScaffoldMessenger.of(outerCtx).showSnackBar(
+                      const SnackBar(
+                        content: Text('Copied to clipboard'),
+                        duration: Duration(seconds: 2),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  },
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -1896,80 +1895,85 @@ class _AyahCard extends StatelessWidget {
     return GestureDetector(
       onLongPress: () => _showCopyMenu(context),
       child: AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
-      decoration: BoxDecoration(
-        color: isActive
-            ? scheme.primaryContainer.withValues(alpha: 0.45)
-            : Colors.transparent,
-        borderRadius: BorderRadius.circular(14),
-        border: isActive
-            ? Border.all(color: scheme.primary.withValues(alpha: 0.35))
-            : null,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Verse number badge — right-aligned per mushaf convention.
-          // Directionality(rtl) is required so that ﴿ ﴾ ornament brackets
-          // render correctly (they are Arabic RTL codepoints).
-          Align(
-            alignment: Alignment.centerRight,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: isActive ? scheme.primary : scheme.surfaceContainerHigh,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Directionality(
-                textDirection: TextDirection.rtl,
-                child: Text(
-                  '﴿${ayah.numberInSurah}﴾',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: isActive
-                        ? scheme.onPrimary
-                        : scheme.onSurfaceVariant,
-                    fontFamily: 'Scheherazade New',
-                    height: 1.4,
+        duration: const Duration(milliseconds: 300),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+        decoration: BoxDecoration(
+          color: isActive
+              ? scheme.primaryContainer.withValues(alpha: 0.45)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(14),
+          border: isActive
+              ? Border.all(color: scheme.primary.withValues(alpha: 0.35))
+              : null,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Verse number badge — right-aligned per mushaf convention.
+            // Directionality(rtl) is required so that ﴿ ﴾ ornament brackets
+            // render correctly (they are Arabic RTL codepoints).
+            Align(
+              alignment: Alignment.centerRight,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: isActive
+                      ? scheme.primary
+                      : scheme.surfaceContainerHigh,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Directionality(
+                  textDirection: TextDirection.rtl,
+                  child: Text(
+                    '﴿${ayah.numberInSurah}﴾',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isActive
+                          ? scheme.onPrimary
+                          : scheme.onSurfaceVariant,
+                      fontFamily: 'Scheherazade New',
+                      height: 1.4,
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-          const SizedBox(height: 8),
-
-          // Arabic text — RTL, justified
-          Directionality(
-            textDirection: TextDirection.rtl,
-            child: Text(
-              ayah.text,
-              style: TextStyle(
-                fontFamily: 'Scheherazade New',
-                fontSize: arabicFontSize,
-                height: 1.9,
-                color: isActive ? scheme.primary : scheme.onSurface,
-                fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
-              ),
-              textAlign: TextAlign.justify,
-            ),
-          ),
-
-          // Optional translation
-          if (translation != null) ...[
             const SizedBox(height: 8),
-            Text(
-              translation!,
-              style: TextStyle(
-                fontSize: 14,
-                color: scheme.onSurfaceVariant,
-                height: 1.5,
+
+            // Arabic text — RTL, justified
+            Directionality(
+              textDirection: TextDirection.rtl,
+              child: Text(
+                ayah.text,
+                style: TextStyle(
+                  fontFamily: 'Scheherazade New',
+                  fontSize: arabicFontSize,
+                  height: 1.9,
+                  color: isActive ? scheme.primary : scheme.onSurface,
+                  fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+                ),
+                textAlign: TextAlign.justify,
               ),
             ),
+
+            // Optional translation
+            if (translation != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                translation!,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: scheme.onSurfaceVariant,
+                  height: 1.5,
+                ),
+              ),
+            ],
           ],
-        ],
-      ),     // Column
-    ),       // AnimatedContainer
-    );       // GestureDetector
+        ), // Column
+      ), // AnimatedContainer
+    ); // GestureDetector
   }
 }

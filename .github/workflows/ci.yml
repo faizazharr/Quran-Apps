@@ -33,7 +33,7 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
-  FLUTTER_VERSION: '3.x'
+  FLUTTER_VERSION: '3.41.7'
   JAVA_VERSION: '17'
 
 jobs:

@@ -261,9 +261,8 @@ class _ResultsList extends StatelessWidget {
           title: 'Something went wrong',
           subtitle: state.errorMessage,
           actionLabel: 'Try again',
-          onAction: () => context.read<SearchBloc>().add(
-            const SearchRefreshRequested(),
-          ),
+          onAction: () =>
+              context.read<SearchBloc>().add(const SearchRefreshRequested()),
         );
       case SearchStatus.refreshing:
       case SearchStatus.success:

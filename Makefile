@@ -3,15 +3,26 @@
 #
 # Usage:
 #   make setup      — install git hooks (run once after cloning)
-#   make check      — run the full pre-push gate locally
+#   make check      — run the full CI gate locally (format + analyze + test)
 #   make fmt        — auto-format lib/ and test/
 #   make analyze    — static analysis
 #   make test       — run unit tests
+#   make build-aab  — build signed release AAB (auto version from pubspec)
 #   make release    — tag a new release (triggers CD pipelines)
 #   make clean      — flutter clean
+#
+# AAB versioning (override as needed):
+#   make build-aab                       → version from pubspec.yaml, code = timestamp
+#   make build-aab VERSION=2.0.0         → custom version name, code = timestamp
+#   make build-aab VERSION=2.0.0 CODE=42 → fully custom
 # ─────────────────────────────────────────────────────────────────────────────
 
 .DEFAULT_GOAL := help
+
+# Read version name from pubspec.yaml (e.g. "1.0.0" from "1.0.0+1")
+VERSION ?= $(shell grep '^version:' pubspec.yaml | awk '{print $$2}' | cut -d'+' -f1)
+# Default build code: YYYYMMDDHHmm (always increases, easy to read)
+CODE    ?= $(shell date +%Y%m%d%H%M)
 
 # ── Setup ─────────────────────────────────────────────────────────────────────
 
@@ -69,9 +80,15 @@ build-apk-release: _check-signing ## Build signed release APK
 	@echo "✓ APK → build/app/outputs/flutter-apk/app-release.apk"
 
 .PHONY: build-aab
-build-aab: _check-signing ## Build signed release AAB (upload to Play Store)
-	@echo "→ flutter build appbundle --release"
-	@flutter build appbundle --release
+build-aab: _check-signing ## Build signed release AAB — VERSION=x.y.z CODE=N (defaults: pubspec + timestamp)
+	@echo ""
+	@echo "  Version name : $(VERSION)"
+	@echo "  Version code : $(CODE)"
+	@echo ""
+	@flutter build appbundle --release \
+		--build-name="$(VERSION)" \
+		--build-number="$(CODE)"
+	@echo ""
 	@echo "✓ AAB → build/app/outputs/bundle/release/app-release.aab"
 	@du -sh build/app/outputs/bundle/release/app-release.aab
 
@@ -84,9 +101,9 @@ build-ipa: ## Build release IPA (requires Apple distribution cert)
 # Guard: fail early if signing files are missing.
 .PHONY: _check-signing
 _check-signing:
-	@test -f android/upload-keystore.jks || \
-	  (echo "✗ android/upload-keystore.jks not found."; \
-	   echo "  Run: keytool -genkey -v -keystore android/upload-keystore.jks \\"; \
+	@test -f upload-keystore.jks || \
+	  (echo "✗ upload-keystore.jks not found."; \
+	   echo "  Run: keytool -genkey -v -keystore upload-keystore.jks \\"; \
 	   echo "         -alias upload -keyalg RSA -keysize 2048 -validity 10000"; \
 	   exit 1)
 	@test -f android/key.properties || \

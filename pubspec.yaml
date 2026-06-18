@@ -8,7 +8,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 #   <MAJOR>.<MINOR>.<PATCH>+<BUILD_NUMBER>
 # Increment BUILD_NUMBER on EVERY uploaded build. Stores reject duplicates.
 # Tag every release in git as `vMAJOR.MINOR.PATCH+BUILD`.
-version: 1.0.0+1
+version: 1.0.1+1
 
 environment:
   sdk: ^3.11.5

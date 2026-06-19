@@ -184,7 +184,10 @@ jobs:
           retention-days: 30
 
       # ── Deploy ke Play Store ─────────────────────────────────────────────────
+      # Skip jika GOOGLE_PLAY_JSON belum dikonfigurasi (AAB tetap tersedia
+      # di artifacts untuk upload manual ke Play Console).
       - name: Deploy → Play Store (${{ steps.track.outputs.track }})
+        if: ${{ secrets.GOOGLE_PLAY_JSON != '' }}
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_JSON }}

@@ -196,7 +196,8 @@ jobs:
 
       - name: Deploy → Play Store (${{ steps.track.outputs.track }})
         if: steps.play_check.outputs.ready == 'true'
-        uses: r0adkll/upload-google-play@v1
+        id: deploy
+        uses: r0adkll/upload-google-play@v1.1.3
         with:
           serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_JSON }}
           packageName: ${{ env.PACKAGE_NAME }}
@@ -205,6 +206,12 @@ jobs:
           status: ${{ steps.track.outputs.status }}
           userFraction: ${{ steps.track.outputs.rollout }}
           releaseName: ${{ steps.version.outputs.full }}
+
+      - name: Verify deploy output
+        if: steps.play_check.outputs.ready == 'true'
+        run: |
+          echo "Internal version code: ${{ steps.deploy.outputs.internalVersionCode }}"
+          echo "Release name: ${{ steps.version.outputs.full }}"
 
       # ── GitHub Release (staging dan main saja) ───────────────────────────────
       # dev-release tidak membuat GitHub Release — terlalu noisy.

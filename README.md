@@ -267,7 +267,19 @@ make clean          # flutter clean
 make help           # Show all targets with descriptions
 ```
 
-### AAB versioning
+### Version bumping
+
+Bump the version name in `pubspec.yaml` and auto-commit — no manual editing needed:
+
+```bash
+make bump-patch     # 1.0.2 → 1.0.3  (bug fix)
+make bump-minor     # 1.0.2 → 1.1.0  (new feature)
+make bump-major     # 1.0.2 → 2.0.0  (breaking change)
+```
+
+Then push to the appropriate release branch to trigger CD.
+
+### AAB local build
 
 ```bash
 make build-aab                          # version from pubspec, code = YYYYMMDDHHmm
@@ -281,7 +293,19 @@ make build-aab VERSION=1.2.0 CODE=42   # fully custom
 
 ### Local signing setup
 
-Create `android/key.properties` (gitignored):
+The upload keystore is `android/upload-keystore.jks` (gitignored). Convert it to
+legacy PKCS12 format for compatibility with bundletool:
+
+```bash
+keytool -importkeystore \
+  -srckeystore android/upload-keystore.jks \
+  -srcstorepass <password> -srckeypass <password> -srcalias upload \
+  -destkeystore upload-keystore-ci.p12 \
+  -deststoretype PKCS12 -deststorepass <password> -destalias upload \
+  -J-Dkeystore.pkcs12.legacy -noprompt
+```
+
+Then create `android/key.properties` (gitignored):
 
 ```properties
 storePassword=<your-password>
@@ -290,7 +314,11 @@ keyAlias=upload
 storeFile=../../upload-keystore-ci.p12
 ```
 
-Place your PKCS12 keystore at the project root as `upload-keystore-ci.p12`.
+> **Important:** The PKCS12 keystore used in CI must match the SHA1 fingerprint
+> registered in Play Console as the upload key. Verify with:
+> ```bash
+> keytool -list -keystore upload-keystore-ci.p12 -storetype PKCS12 -storepass <password> -v
+> ```
 
 ### Manual AAB build
 
@@ -344,11 +372,19 @@ gh secret set KEY_ALIAS --body "upload"
 gh secret set GOOGLE_PLAY_JSON < service-account.json
 ```
 
+### Play Store track mapping
+
+| Branch | Track | Status | Notes |
+|--------|-------|--------|-------|
+| `dev-release` | Internal Testing | `completed` | Available to all internal testers immediately |
+| `staging` | Closed Testing (alpha) | `completed` | Available to invited testers |
+| `main` | Production | `inProgress` | 10% staged rollout — increase manually in Play Console |
+
 ### Version numbering in CI
 
-- **Version name** — read from `pubspec.yaml` (e.g. `1.0.1`)
-- **Version code** — `github.run_number` (always increasing, unique per repo)
-- Each push to a release branch produces a unique build (e.g. `1.0.1+42`)
+- **Version name** — read from `pubspec.yaml` (e.g. `1.0.2`). Use `make bump-patch/minor/major` to change it.
+- **Version code** — `github.run_number` (always increasing, unique per repo, never needs manual editing)
+- Each push to a release branch produces a unique build (e.g. `1.0.2+42`)
 
 ---
 

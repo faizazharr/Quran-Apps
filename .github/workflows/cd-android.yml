@@ -196,9 +196,23 @@ jobs:
             echo "ready=false" >> "$GITHUB_OUTPUT"
           fi
 
+      # userFraction is only valid when status=inProgress (production staged rollout).
+      # Passing it for status=completed causes a validation error in the action.
       - name: Deploy → Play Store (${{ steps.track.outputs.track }})
-        if: steps.play_check.outputs.ready == 'true'
+        if: steps.play_check.outputs.ready == 'true' && github.ref_name != 'main'
         id: deploy
+        uses: r0adkll/upload-google-play@v1.1.3
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_JSON }}
+          packageName: ${{ env.PACKAGE_NAME }}
+          releaseFiles: build/app/outputs/bundle/release/app-release.aab
+          track: ${{ steps.track.outputs.track }}
+          status: ${{ steps.track.outputs.status }}
+          releaseName: ${{ steps.version.outputs.full }}
+
+      - name: Deploy → Play Store (production — staged rollout)
+        if: steps.play_check.outputs.ready == 'true' && github.ref_name == 'main'
+        id: deploy_prod
         uses: r0adkll/upload-google-play@v1.1.3
         with:
           serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_JSON }}

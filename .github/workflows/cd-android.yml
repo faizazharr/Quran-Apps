@@ -184,10 +184,18 @@ jobs:
           retention-days: 30
 
       # ── Deploy ke Play Store ─────────────────────────────────────────────────
-      # Skip jika GOOGLE_PLAY_JSON belum dikonfigurasi (AAB tetap tersedia
-      # di artifacts untuk upload manual ke Play Console).
+      # secrets context tidak bisa dipakai di if:, gunakan step output sebagai gate.
+      - name: Check Play Store config
+        id: play_check
+        run: |
+          if [ -n "${{ secrets.GOOGLE_PLAY_JSON }}" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Deploy → Play Store (${{ steps.track.outputs.track }})
-        if: ${{ secrets.GOOGLE_PLAY_JSON != '' }}
+        if: steps.play_check.outputs.ready == 'true'
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_JSON }}

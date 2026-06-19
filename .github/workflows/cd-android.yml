@@ -104,12 +104,14 @@ jobs:
         run: flutter pub get
 
       # ── Signing ─────────────────────────────────────────────────────────────
-      # Save as .p12 so AGP infers PKCS12 from the extension.
-      # Using printf avoids echo's newline injection corrupting binary data.
+      # Decode to project root (same path as local dev) so storeFile resolves
+      # identically: ../../upload-keystore.p12 from android/app/ = project root.
+      # Using env var avoids inline ${{ }} substitution edge-cases with long
+      # multi-line secrets.
       - name: Decode upload keystore
-        run: |
-          printf '%s' "${{ secrets.KEYSTORE_BASE64 }}" \
-            | base64 --decode > android/upload-keystore.p12
+        env:
+          KEYSTORE_B64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: echo "$KEYSTORE_B64" | base64 --decode > upload-keystore.p12
 
       - name: Write key.properties
         run: |
@@ -117,8 +119,14 @@ jobs:
           storePassword=${{ secrets.STORE_PASSWORD }}
           keyPassword=${{ secrets.KEY_PASSWORD }}
           keyAlias=${{ secrets.KEY_ALIAS }}
-          storeFile=../upload-keystore.p12
+          storeFile=../../upload-keystore.p12
           EOF
+
+      - name: Verify keystore readable
+        run: |
+          keytool -list -keystore upload-keystore.p12 \
+            -storetype PKCS12 -storepass "${{ secrets.STORE_PASSWORD }}" \
+            2>&1 | head -6
 
       # ── Tentukan track berdasarkan branch ────────────────────────────────────
       - name: Resolve release track

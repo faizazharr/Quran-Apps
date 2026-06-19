@@ -187,8 +187,10 @@ jobs:
       # secrets context tidak bisa dipakai di if:, gunakan step output sebagai gate.
       - name: Check Play Store config
         id: play_check
+        env:
+          PLAY_JSON: ${{ secrets.GOOGLE_PLAY_JSON }}
         run: |
-          if [ -n "${{ secrets.GOOGLE_PLAY_JSON }}" ]; then
+          if [ -n "$PLAY_JSON" ]; then
             echo "ready=true" >> "$GITHUB_OUTPUT"
           else
             echo "ready=false" >> "$GITHUB_OUTPUT"

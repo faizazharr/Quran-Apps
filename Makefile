@@ -115,6 +115,46 @@ _check-signing:
 clean: ## flutter clean
 	@flutter clean
 
+# ── Version bumping ───────────────────────────────────────────────────────────
+# Updates pubspec.yaml version and commits. CI reads version name from pubspec;
+# build number is always github.run_number (no need to touch pubspec for that).
+#
+#   make bump-patch   →  1.0.1 → 1.0.2   (bug fix release)
+#   make bump-minor   →  1.0.1 → 1.1.0   (new feature)
+#   make bump-major   →  1.0.1 → 2.0.0   (breaking change)
+
+.PHONY: bump-patch bump-minor bump-major
+
+bump-patch: ## Bump patch version (1.0.1 → 1.0.2) and commit
+	@python3 -c "\
+import re; t=open('pubspec.yaml').read(); \
+m=re.search(r'version: (\d+)\.(\d+)\.(\d+)',t); \
+ma,mi,pa=int(m.group(1)),int(m.group(2)),int(m.group(3))+1; \
+open('pubspec.yaml','w').write(re.sub(r'(?m)^version:.*$$','version: {}.{}.{}+1'.format(ma,mi,pa),t))"
+	@NEW=$$(grep '^version:' pubspec.yaml | awk '{print $$2}'); \
+	 git add pubspec.yaml && git commit -m "chore: bump version to $$NEW"
+	@echo "✓ Version bumped to $$(grep '^version:' pubspec.yaml | awk '{print $$2}')"
+
+bump-minor: ## Bump minor version (1.0.1 → 1.1.0) and commit
+	@python3 -c "\
+import re; t=open('pubspec.yaml').read(); \
+m=re.search(r'version: (\d+)\.(\d+)\.(\d+)',t); \
+ma,mi,pa=int(m.group(1)),int(m.group(2))+1,0; \
+open('pubspec.yaml','w').write(re.sub(r'(?m)^version:.*$$','version: {}.{}.{}+1'.format(ma,mi,pa),t))"
+	@NEW=$$(grep '^version:' pubspec.yaml | awk '{print $$2}'); \
+	 git add pubspec.yaml && git commit -m "chore: bump version to $$NEW"
+	@echo "✓ Version bumped to $$(grep '^version:' pubspec.yaml | awk '{print $$2}')"
+
+bump-major: ## Bump major version (1.0.1 → 2.0.0) and commit
+	@python3 -c "\
+import re; t=open('pubspec.yaml').read(); \
+m=re.search(r'version: (\d+)\.(\d+)\.(\d+)',t); \
+ma,mi,pa=int(m.group(1))+1,0,0; \
+open('pubspec.yaml','w').write(re.sub(r'(?m)^version:.*$$','version: {}.{}.{}+1'.format(ma,mi,pa),t))"
+	@NEW=$$(grep '^version:' pubspec.yaml | awk '{print $$2}'); \
+	 git add pubspec.yaml && git commit -m "chore: bump version to $$NEW"
+	@echo "✓ Version bumped to $$(grep '^version:' pubspec.yaml | awk '{print $$2}')"
+
 # ── Release ───────────────────────────────────────────────────────────────────
 # Creates a signed git tag from the version in pubspec.yaml and pushes it,
 # which triggers the cd-android.yml and cd-ios.yml pipelines automatically.

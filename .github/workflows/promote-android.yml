@@ -45,7 +45,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Compute rollout fraction
         id: rollout
@@ -55,14 +55,19 @@ jobs:
             PCT=$(( PCT < 1   ? 1   : PCT ))
             PCT=$(( PCT > 100 ? 100 : PCT ))
             echo "fraction=$(echo "scale=2; $PCT/100" | bc)" >> "$GITHUB_OUTPUT"
-            echo "status=inProgress" >> "$GITHUB_OUTPUT"
+            echo "status=inProgress"   >> "$GITHUB_OUTPUT"
+            echo "use_rollout=true"    >> "$GITHUB_OUTPUT"
           else
-            echo "fraction=1.0"   >> "$GITHUB_OUTPUT"
-            echo "status=completed" >> "$GITHUB_OUTPUT"
+            echo "fraction=1.0"        >> "$GITHUB_OUTPUT"
+            echo "status=completed"    >> "$GITHUB_OUTPUT"
+            echo "use_rollout=false"   >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Promote release on Play Store
-        uses: r0adkll/upload-google-play@v1
+      # userFraction is only valid when status=inProgress (production).
+      # For alpha/beta promotes (status=completed), omit it entirely.
+      - name: Promote to ${{ inputs.to_track }} (with rollout)
+        if: steps.rollout.outputs.use_rollout == 'true'
+        uses: r0adkll/upload-google-play@v1.1.5
         with:
           serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_JSON }}
           packageName: ${{ env.PACKAGE_NAME }}
@@ -70,6 +75,16 @@ jobs:
           fromTrack: ${{ inputs.from_track }}
           status: ${{ steps.rollout.outputs.status }}
           userFraction: ${{ steps.rollout.outputs.fraction }}
+
+      - name: Promote to ${{ inputs.to_track }} (completed)
+        if: steps.rollout.outputs.use_rollout == 'false'
+        uses: r0adkll/upload-google-play@v1.1.5
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_JSON }}
+          packageName: ${{ env.PACKAGE_NAME }}
+          track: ${{ inputs.to_track }}
+          fromTrack: ${{ inputs.from_track }}
+          status: ${{ steps.rollout.outputs.status }}
 
       - name: Job summary
         run: |

@@ -66,6 +66,12 @@ app.*.map.json
 /*.jks
 /*.keystore
 /*.p12
+*.p8
+*.pem
+*.cer
+*.mobileprovision
+upload-keystore*
+**/*service-account*.json
 **/google-services.json
 **/GoogleService-Info.plist
 *.env

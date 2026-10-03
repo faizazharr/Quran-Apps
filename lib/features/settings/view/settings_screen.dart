@@ -7,9 +7,11 @@ import '../../../core/utils/duration_formatter.dart';
 import '../../../data/models/app_settings.dart';
 import '../../../data/models/translation_edition.dart';
 import '../../../l10n/generated/app_localizations.dart';
+import '../../../shared/widgets/ad_banner.dart';
 import '../../bookmark/bloc/bookmark_bloc.dart';
 import '../../player/bloc/player_bloc.dart';
 import '../../search/bloc/search_bloc.dart';
+import '../../support/view/support_card.dart';
 import '../bloc/settings_bloc.dart';
 import '../widgets/sleep_timer_dialog.dart';
 
@@ -306,6 +308,13 @@ class SettingsScreen extends StatelessWidget {
                             );
                           },
                         ),
+                        const Divider(height: 24),
+
+                        // --- Support (infaq) ---
+                        _SectionHeader(l10n.supportSection),
+                        const SupportCard(),
+                        const SizedBox(height: 16),
+                        const Center(child: AdBanner()),
                         // bottom breathing room
                         const SizedBox(height: 32),
                       ],

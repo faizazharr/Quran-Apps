@@ -23,5 +23,10 @@
     "hideTranslation": "Sembunyikan terjemahan",
     "ayahNumber": "Ayat {number}",
     "cloudSync": "Sinkronisasi cloud",
-    "cloudSyncNotConfigured": "Sinkronisasi cloud belum dikonfigurasi."
+    "cloudSyncNotConfigured": "Sinkronisasi cloud belum dikonfigurasi.",
+    "supportSection": "Dukung developer",
+    "supportTitle": "Beri tip untuk developer",
+    "supportBody": "Aplikasi ini gratis dan tanpa fitur berbayar. Tip bersifat sukarela dan tidak membuka fitur apa pun. Terima kasih!",
+    "supportThanks": "Terima kasih atas dukunganmu!",
+    "supportFailed": "Pembelian gagal. Silakan coba lagi."
 }

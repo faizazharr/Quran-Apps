@@ -38,6 +38,14 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        // AdMob app ID: real value from ADMOB_APP_ID env / -PADMOB_APP_ID
+        // (CI secret); falls back to Google's public TEST app ID.
+        val admobAppId = (System.getenv("ADMOB_APP_ID")
+            ?: project.findProperty("ADMOB_APP_ID") as String?)
+            ?.takeIf { it.isNotBlank() }
+            ?: "ca-app-pub-3940256099942544~3347511713"
+        manifestPlaceholders["admobAppId"] = admobAppId
     }
 
     signingConfigs {

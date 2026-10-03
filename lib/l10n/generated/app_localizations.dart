@@ -241,6 +241,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Cloud sync is not configured.'**
   String get cloudSyncNotConfigured;
+
+  /// No description provided for @supportSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Support the developer'**
+  String get supportSection;
+
+  /// No description provided for @supportTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tip the developer'**
+  String get supportTitle;
+
+  /// No description provided for @supportBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This app is free and has no paid features. A tip is entirely voluntary and unlocks nothing. Thank you!'**
+  String get supportBody;
+
+  /// No description provided for @supportThanks.
+  ///
+  /// In en, this message translates to:
+  /// **'Thank you for your support!'**
+  String get supportThanks;
+
+  /// No description provided for @supportFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchase failed. Please try again.'**
+  String get supportFailed;
 }
 
 class _AppLocalizationsDelegate

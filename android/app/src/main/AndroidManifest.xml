@@ -5,6 +5,8 @@
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"/>
+    <!-- AdMob: advertising ID (required on Android 13+ when the app uses it) -->
+    <uses-permission android:name="com.google.android.gms.permission.AD_ID"/>
     <application
         android:label="Quran Player"
         android:name="${applicationName}"
@@ -47,6 +49,10 @@
                 <action android:name="android.intent.action.MEDIA_BUTTON"/>
             </intent-filter>
         </receiver>
+        <!-- AdMob app ID, injected by Gradle (ADMOB_APP_ID env/property; defaults to Google's TEST ID). -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="${admobAppId}"/>
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />

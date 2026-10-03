@@ -26,6 +26,10 @@ concurrency:
   group: cd-ios-${{ github.ref }}
   cancel-in-progress: false
 
+# Least privilege for GITHUB_TOKEN (repo is public).
+permissions:
+  contents: write
+
 env:
   FLUTTER_VERSION: '3.x'
   BUNDLE_ID: com.labs.quran

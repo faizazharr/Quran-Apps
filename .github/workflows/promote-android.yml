@@ -36,6 +36,10 @@ on:
         required: false
         default: '100'
 
+# Least privilege for GITHUB_TOKEN (repo is public).
+permissions:
+  contents: read
+
 env:
   PACKAGE_NAME: com.labs.quran
 

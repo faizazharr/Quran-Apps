@@ -17,6 +17,14 @@ YELLOW='\033[1;33m'
 GREEN='\033[0;32m'
 NC='\033[0m'
 
+# Block signing material / credentials from ever being committed (public repo).
+BAD=$(git diff --cached --name-only --diff-filter=ACM | grep -iE '\.(jks|keystore|p12|p8|pem|cer|mobileprovision)$|(^|/)key\.properties$|service-account.*\.json$|google-services\.json$|GoogleService-Info\.plist$|(^|/)\.env' || true)
+if [ -n "$BAD" ]; then
+  echo "${YELLOW}${BOLD}[pre-commit]${NC} BLOCKED: secret/signing files staged:"
+  echo "$BAD"
+  exit 1
+fi
+
 echo "${YELLOW}${BOLD}[pre-commit]${NC} Formatting Dart files…"
 
 # Format lib/ and test/ in-place.

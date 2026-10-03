@@ -83,4 +83,20 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get cloudSyncNotConfigured => 'Cloud sync is not configured.';
+
+  @override
+  String get supportSection => 'Support the developer';
+
+  @override
+  String get supportTitle => 'Tip the developer';
+
+  @override
+  String get supportBody =>
+      'This app is free and has no paid features. A tip is entirely voluntary and unlocks nothing. Thank you!';
+
+  @override
+  String get supportThanks => 'Thank you for your support!';
+
+  @override
+  String get supportFailed => 'Purchase failed. Please try again.';
 }

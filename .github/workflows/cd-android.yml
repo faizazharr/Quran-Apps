@@ -39,6 +39,10 @@ concurrency:
   group: cd-android-${{ github.ref }}
   cancel-in-progress: false
 
+# Least privilege for GITHUB_TOKEN (repo is public).
+permissions:
+  contents: write
+
 env:
   FLUTTER_VERSION: '3.x'
   JAVA_VERSION: '17'
@@ -169,11 +173,31 @@ jobs:
           echo "full=$NAME+${{ github.run_number }}" >> "$GITHUB_OUTPUT"
 
       # ── Build ────────────────────────────────────────────────────────────────
+      # AdMob IDs:
+      #   main            → REAL ids from secrets (ADMOB_APP_ID, ADMOB_BANNER_UNIT_ID);
+      #                     build fails if either is missing.
+      #   other branches  → Google's public TEST ids, so internal/alpha testers
+      #                     can never produce invalid traffic on the real unit.
       - name: Build release AAB
+        env:
+          SECRET_ADMOB_APP_ID: ${{ secrets.ADMOB_APP_ID }}
+          SECRET_ADMOB_BANNER_UNIT_ID: ${{ secrets.ADMOB_BANNER_UNIT_ID }}
         run: |
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            if [ -z "$SECRET_ADMOB_APP_ID" ] || [ -z "$SECRET_ADMOB_BANNER_UNIT_ID" ]; then
+              echo "::error::ADMOB_APP_ID and ADMOB_BANNER_UNIT_ID secrets are required for production."
+              exit 1
+            fi
+            export ADMOB_APP_ID="$SECRET_ADMOB_APP_ID"
+            BANNER="$SECRET_ADMOB_BANNER_UNIT_ID"
+          else
+            export ADMOB_APP_ID="ca-app-pub-3940256099942544~3347511713"
+            BANNER="ca-app-pub-3940256099942544/6300978111"
+          fi
           flutter build appbundle --release \
             --build-name="${{ steps.version.outputs.name }}" \
-            --build-number="${{ steps.version.outputs.code }}"
+            --build-number="${{ steps.version.outputs.code }}" \
+            --dart-define=ADMOB_BANNER_UNIT_ID="$BANNER"
 
       # Simpan AAB 30 hari — berguna untuk investigasi jika ada crash report.
       - name: Upload AAB artifact

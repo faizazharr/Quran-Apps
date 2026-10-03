@@ -21,8 +21,10 @@
 
 # Read version name from pubspec.yaml (e.g. "1.0.0" from "1.0.0+1")
 VERSION ?= $(shell grep '^version:' pubspec.yaml | awk '{print $$2}' | cut -d'+' -f1)
-# Default build code: YYYYMMDDHHmm (always increases, easy to read)
-CODE    ?= $(shell date +%Y%m%d%H%M)
+# Default build code: unix seconds (always increases, fits Android's 2.1e9 limit).
+# LOCAL builds only - never upload these to Play: CI uses github.run_number, and
+# a larger local code would make every later CI upload get rejected.
+CODE    ?= $(shell date +%s)
 
 # ── Setup ─────────────────────────────────────────────────────────────────────
 

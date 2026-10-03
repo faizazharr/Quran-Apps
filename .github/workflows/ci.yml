@@ -32,6 +32,10 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+# Least privilege for GITHUB_TOKEN (repo is public).
+permissions:
+  contents: read
+
 env:
   FLUTTER_VERSION: '3.x'
   JAVA_VERSION: '17'
@@ -183,3 +187,12 @@ jobs:
         with:
           fail-on-severity: high
           deny-licenses: GPL-3.0, AGPL-3.0
+          # pub.dev reports these lowercase (non-SPDX) license ids, which the
+          # action cannot validate. Verified permissive: Apache-2.0 / BSD-3-Clause.
+          allow-dependencies-licenses: >-
+            pkg:pub/google_mobile_ads,
+            pkg:pub/in_app_purchase,
+            pkg:pub/in_app_purchase_android,
+            pkg:pub/in_app_purchase_storekit,
+            pkg:pub/webview_flutter_android,
+            pkg:pub/webview_flutter_wkwebview

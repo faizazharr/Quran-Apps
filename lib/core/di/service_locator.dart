@@ -28,6 +28,7 @@ import '../../data/services/download_service.dart';
 import '../../data/services/download_service_impl.dart';
 import '../../data/services/just_audio_player_service.dart';
 import '../../data/services/quote_service.dart';
+import '../../data/services/tip_service.dart';
 import '../../features/activity/bloc/activity_bloc.dart';
 import '../../features/ayah/bloc/ayah_bloc.dart';
 import '../../features/bookmark/bloc/bookmark_bloc.dart';
@@ -38,6 +39,7 @@ import '../../features/quote/bloc/quote_bloc.dart';
 import '../../features/search/bloc/search_bloc.dart';
 import '../../features/settings/bloc/settings_bloc.dart';
 import '../../features/sleep_timer/bloc/sleep_timer_bloc.dart';
+import '../../features/support/bloc/tip_bloc.dart';
 import '../network/connectivity_service.dart';
 import '../network/connectivity_service_impl.dart';
 import '../network/network_client.dart';
@@ -126,6 +128,8 @@ Future<void> configureDependencies() async {
   sl.registerFactory<SettingsBloc>(
     () => SettingsBloc(sl<ISettingsRepository>()),
   );
+  sl.registerLazySingleton<ITipService>(PlayTipService.new);
+  sl.registerFactory<TipBloc>(() => TipBloc(sl<ITipService>()));
   sl.registerFactory<SearchBloc>(() => SearchBloc(sl<IQuranRepository>()));
   sl.registerFactory<PlayerBloc>(
     () => PlayerBloc(

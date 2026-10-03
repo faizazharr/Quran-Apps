@@ -84,4 +84,20 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get cloudSyncNotConfigured =>
       'Sinkronisasi cloud belum dikonfigurasi.';
+
+  @override
+  String get supportSection => 'Dukung developer';
+
+  @override
+  String get supportTitle => 'Beri tip untuk developer';
+
+  @override
+  String get supportBody =>
+      'Aplikasi ini gratis dan tanpa fitur berbayar. Tip bersifat sukarela dan tidak membuka fitur apa pun. Terima kasih!';
+
+  @override
+  String get supportThanks => 'Terima kasih atas dukunganmu!';
+
+  @override
+  String get supportFailed => 'Pembelian gagal. Silakan coba lagi.';
 }

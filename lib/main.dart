@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 
 import 'app.dart';
 import 'core/di/service_locator.dart';
+import 'data/services/ads_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,4 +24,6 @@ Future<void> main() async {
 
   await configureDependencies();
   runApp(const QuranPlayerApp());
+  // Consent + SDK init off the startup path; banners appear once ready.
+  unawaited(AdsService.instance.init());
 }

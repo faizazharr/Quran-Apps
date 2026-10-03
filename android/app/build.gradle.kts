@@ -17,6 +17,9 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
+// Google's public sample AdMob app ID (always safe to ship in dev builds).
+val ADMOB_TEST_APP_ID = "ca-app-pub-3940256099942544~3347511713"
+
 android {
     namespace = "com.labs.quran"
     compileSdk = flutter.compileSdkVersion
@@ -38,6 +41,11 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        // AdMob app ID: Google's public TEST ID by default. Only release
+        // builds may override it (see buildTypes) so dev/debug builds can
+        // never serve real ads (invalid-traffic risk for the AdMob account).
+        manifestPlaceholders["admobAppId"] = ADMOB_TEST_APP_ID
     }
 
     signingConfigs {
@@ -79,6 +87,13 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             isDebuggable = false
+            // Real AdMob app ID comes from CI secret / env (ADMOB_APP_ID) or
+            // -PADMOB_APP_ID; missing means test ID.
+            manifestPlaceholders["admobAppId"] =
+                (System.getenv("ADMOB_APP_ID")
+                    ?: project.findProperty("ADMOB_APP_ID") as String?)
+                    ?.takeIf { it.isNotBlank() }
+                    ?: ADMOB_TEST_APP_ID
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
